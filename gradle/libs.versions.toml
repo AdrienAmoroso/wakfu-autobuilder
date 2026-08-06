@@ -26,6 +26,11 @@ ktlint = "14.2.0"
 # artifacts (they share that version). Material3 ships on a separate cadence, hence its own version.
 compose = "1.11.1"
 composeMaterial3 = "1.9.0"
+# Ktor: market-server's HTTP layer.
+ktor = "3.2.0"
+# Exposed: market-server's SQL layer (the 1.0.0-beta line, superseding the old 0.6x series).
+exposed = "1.0.0-beta-4"
+sqliteJdbc = "3.49.1.0"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
@@ -45,6 +50,16 @@ compose-desktop-macos-x64 = { module = "org.jetbrains.compose.desktop:desktop-jv
 compose-desktop-linux-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-linux-x64", version.ref = "compose" }
 compose-desktop-windows-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-windows-x64", version.ref = "compose" }
 compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "compose" }
+ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json-jvm", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging-jvm", version.ref = "ktor" }
+ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages-jvm", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
 
 [plugins]
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
@@ -55,3 +70,5 @@ compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 
 [bundles]
 fuel = ["fuel-core", "fuel-coroutines", "fuel-kotlinx"]
+ktor-server = ["ktor-server-core", "ktor-server-netty", "ktor-server-content-negotiation", "ktor-serialization-kotlinx-json", "ktor-server-call-logging", "ktor-server-status-pages"]
+exposed = ["exposed-core", "exposed-jdbc"]
