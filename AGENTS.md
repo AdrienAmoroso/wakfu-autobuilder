@@ -300,7 +300,7 @@ JDK 25 required. Use the Gradle wrapper.
 WAKFU_COMPOSE_SCREENSHOT=/tmp/out.png ./gradlew :gui-compose:run
 
 # Example CLI search:
-./gradlew :autobuilder:run --args="--level 110 --action-point 11 --movement-point 5 \
+./gradlew :autobuilder:run --args="--max-level 110 --action-point 11 --movement-point 5 \
   --mastery-distance 500 --hp 2000 --range 2 --cc 30 --class cra --create-zenith-build --duration 60"
 ```
 

@@ -138,7 +138,7 @@ private class WakfuAutobuild :
     |Current Wakfu data version used: $VERSION
     |
     |Here's an example of usage in your terminal: 
-    |./wakfu-autobuilder-cli.exe --level 110 --action-point 11 --movement-point 5 --mastery-distance 500 --hp 2000 --range 2 --cc 30 --class cra --create-zenith-build --duration 60
+    |./wakfu-autobuilder-cli.exe --max-level 110 --action-point 11 --movement-point 5 --mastery-distance 500 --hp 2000 --range 2 --cc 30 --class cra --create-zenith-build --duration 60
         """.trimMargin()
 
     private val maxLevelWanted: Int by option(

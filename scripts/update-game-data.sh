@@ -51,7 +51,7 @@ echo "==> [4/5] bdata artifacts + sublimations + monsters (local game binaries a
 BDATA_FORCE_WRITE=1 ./gradlew --console=plain :bdata-extractor:run --args="$WAKFU_INSTALL $new_version"
 
 echo "==> [5/5] Icons (item / spell / monster)…"
-./gradlew --console=plain :gui-compose:generateAssets
+./gradlew --console=plain :gui-compose:generateAssets "-Pwakfu.install=$WAKFU_INSTALL"
 
 cat <<EOF
 
