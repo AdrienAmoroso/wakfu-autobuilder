@@ -355,6 +355,15 @@ data class UiState(
      * never queried yet -- refreshed once when the Market screen is opened.
      */
     val captureStatus: CaptureStatusResponse? = null,
+    /**
+     * Item lookups resolved from market-server's `/api/items/{id}` (name/rarity/icon/level) so the
+     * Prices/Craft Cost tabs can render a bare `itemId` as the same rich item display the build
+     * optimizer uses, instead of a number. Populated lazily by [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded]
+     * as each id is first shown; absent = not resolved (yet, or the id doesn't exist).
+     */
+    val itemInfoCache: Map<Int, Equipment> = emptyMap(),
+    /** itemIds already requested via [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded], so each id is fetched at most once per session. */
+    val itemInfoRequested: Set<Int> = emptySet(),
 )
 
 /**

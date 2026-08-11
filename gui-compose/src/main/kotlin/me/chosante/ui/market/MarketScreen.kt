@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,12 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import me.chosante.common.Equipment
 import me.chosante.marketclient.CaptureStatusResponse
 import me.chosante.marketclient.CreateObservationRequest
 import me.chosante.marketclient.FlagMotif
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.components.Hairline
+import me.chosante.ui.components.ItemThumbnail
+import me.chosante.ui.components.RarityIcon
+import me.chosante.ui.components.localized
+import me.chosante.ui.i18n.Lang
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.MarketTab
 import me.chosante.ui.state.UiState
@@ -59,6 +67,7 @@ fun MarketScreen(
     onLookupCraftCost: () -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
+    onRequestItemInfo: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(WColor.bg)) {
         MarketTabHeader(current = ui.marketTab, onSelect = onSelectTab)
@@ -74,14 +83,16 @@ fun MarketScreen(
                         onUpdatePrices = onUpdatePrices,
                         onSetFlag = onSetFlag,
                         onStartCapture = onStartCapture,
-                        onStopCapture = onStopCapture
+                        onStopCapture = onStopCapture,
+                        onRequestItemInfo = onRequestItemInfo
                     )
 
                 MarketTab.CRAFT_COST ->
                     CraftCostTab(
                         ui = ui,
                         onCraftCostItemIdChange = onCraftCostItemIdChange,
-                        onLookupCraftCost = onLookupCraftCost
+                        onLookupCraftCost = onLookupCraftCost,
+                        onRequestItemInfo = onRequestItemInfo
                     )
             }
         }
@@ -194,6 +205,7 @@ private fun PricesTab(
     onSetFlag: (Int, FlagMotif) -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
+    onRequestItemInfo: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         CaptureBar(status = ui.captureStatus, onStart = onStartCapture, onStop = onStopCapture)
@@ -228,6 +240,9 @@ private fun PricesTab(
                     items(ui.marketObservations, key = { it.id }) { observation ->
                         ObservationRow(
                             observation = observation,
+                            equipment = ui.itemInfoCache[observation.itemId],
+                            lang = ui.lang,
+                            onRequestItemInfo = onRequestItemInfo,
                             onDelete = { onDeleteObservation(observation.id) },
                             onUpdatePrices = onUpdatePrices,
                             onSetFlag = onSetFlag
@@ -366,6 +381,9 @@ private fun NewObservationForm(
 @Composable
 private fun ObservationRow(
     observation: ObservationResponse,
+    equipment: Equipment?,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
     onDelete: () -> Unit,
     onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
     onSetFlag: (Int, FlagMotif) -> Unit,
@@ -385,7 +403,13 @@ private fun ObservationRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(text = "#${observation.itemId}", style = WTypography.bodyMedium, modifier = Modifier.widthIn(min = 70.dp))
+        ItemBadge(
+            itemId = observation.itemId,
+            equipment = equipment,
+            lang = lang,
+            onRequestItemInfo = onRequestItemInfo,
+            modifier = Modifier.widthIn(min = 200.dp)
+        )
         Text(text = observation.server.ifBlank { "—" }, style = WTypography.bodySmall.copy(color = WColor.muted), modifier = Modifier.widthIn(min = 70.dp))
         SmallTextField(value = minPriceText, onValueChange = { minPriceText = it.filter(Char::isDigit) }, placeholder = "min", modifier = Modifier.width(90.dp))
         SmallTextField(value = avgPriceText, onValueChange = { avgPriceText = it.filter(Char::isDigit) }, placeholder = "avg", modifier = Modifier.width(90.dp))
@@ -425,6 +449,7 @@ private fun CraftCostTab(
     ui: UiState,
     onCraftCostItemIdChange: (String) -> Unit,
     onLookupCraftCost: () -> Unit,
+    onRequestItemInfo: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -444,7 +469,13 @@ private fun CraftCostTab(
             ui.craftCostState == MarketState.Error ->
                 MarketMessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
 
-            ui.craftCostResult != null -> CraftCostResultCard(ui.craftCostResult)
+            ui.craftCostResult != null ->
+                CraftCostResultCard(
+                    result = ui.craftCostResult,
+                    itemInfo = ui.itemInfoCache,
+                    lang = ui.lang,
+                    onRequestItemInfo = onRequestItemInfo
+                )
 
             else -> MarketMessageCard(title = "No lookup yet", hint = "Enter a craftable item's id and hit Lookup.")
         }
@@ -452,7 +483,12 @@ private fun CraftCostTab(
 }
 
 @Composable
-private fun CraftCostResultCard(result: me.chosante.marketclient.CraftCostResponse) {
+private fun CraftCostResultCard(
+    result: me.chosante.marketclient.CraftCostResponse,
+    itemInfo: Map<Int, Equipment>,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
+) {
     Column(
         modifier =
             Modifier
@@ -462,6 +498,8 @@ private fun CraftCostResultCard(result: me.chosante.marketclient.CraftCostRespon
                 .border(1.dp, WColor.border, RoundedCornerShape(WDimens.radius))
                 .padding(16.dp)
     ) {
+        ItemBadge(itemId = result.itemId, equipment = itemInfo[result.itemId], lang = lang, onRequestItemInfo = onRequestItemInfo)
+        Spacer(modifier = Modifier.height(10.dp))
         val decisionColor =
             when (result.decision) {
                 "craft" -> WColor.success
@@ -485,10 +523,61 @@ private fun CraftCostResultCard(result: me.chosante.marketclient.CraftCostRespon
         Text(text = "Ingredients", style = WTypography.titleMedium)
         Spacer(modifier = Modifier.height(6.dp))
         result.ingredients.forEach { ingredient ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "#${ingredient.itemId} × ${ingredient.quantity}", style = WTypography.bodySmall.copy(color = WColor.muted))
-                Text(text = ingredient.subtotal?.toString() ?: "no price", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ItemBadge(
+                    itemId = ingredient.itemId,
+                    equipment = itemInfo[ingredient.itemId],
+                    lang = lang,
+                    onRequestItemInfo = onRequestItemInfo,
+                    modifier = Modifier.widthIn(min = 200.dp)
+                )
+                Text(
+                    text = "× ${ingredient.quantity} — ${ingredient.subtotal?.toString() ?: "no price"}",
+                    style = WTypography.bodySmall.copy(color = WColor.muted)
+                )
             }
+        }
+    }
+}
+
+/**
+ * An item's icon/rarity/localized-name/level, resolved lazily from [equipment] (looked up by
+ * `itemId` in [UiState.itemInfoCache]) -- the same visual language the build optimizer's paperdoll
+ * uses ([ItemThumbnail]/[RarityIcon]), so a price/ingredient row reads as "this specific item," not
+ * a bare id. Falls back to a plain "#itemId" placeholder tile while the lookup is in flight or the
+ * id is unknown to market-server's catalog.
+ */
+@Composable
+private fun ItemBadge(
+    itemId: Int,
+    equipment: Equipment?,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LaunchedEffect(itemId) { onRequestItemInfo(itemId) }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (equipment != null) {
+            ItemThumbnail(equipment = equipment, size = 32.dp)
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    RarityIcon(rarity = equipment.rarity, size = 12.dp)
+                    Text(
+                        text = equipment.name.localized(lang),
+                        style = WTypography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(text = "Lvl ${equipment.level} · #$itemId", style = WTypography.labelSmall.copy(color = WColor.muted))
+            }
+        } else {
+            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WColor.bg))
+            Text(text = "#$itemId", style = WTypography.bodyMedium.copy(color = WColor.muted))
         }
     }
 }

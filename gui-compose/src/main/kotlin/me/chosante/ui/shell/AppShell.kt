@@ -164,7 +164,8 @@ fun AppShell(
                                 onCraftCostItemIdChange = model::setCraftCostItemId,
                                 onLookupCraftCost = model::lookupCraftCost,
                                 onStartCapture = model::startCapture,
-                                onStopCapture = model::stopCapture
+                                onStopCapture = model::stopCapture,
+                                onRequestItemInfo = model::ensureItemInfoLoaded
                             )
                     }
                 }

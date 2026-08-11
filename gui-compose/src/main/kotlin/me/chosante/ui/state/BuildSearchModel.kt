@@ -1392,6 +1392,28 @@ class BuildSearchModel(
         }
     }
 
+    /**
+     * Resolves [itemId] into the rich [me.chosante.common.Equipment] display shown next to prices/
+     * ingredients (icon, rarity, localized name, level) via `GET /api/items/{id}`, caching the
+     * result in [UiState.itemInfoCache]. Fire-and-forget and idempotent per session: a row's
+     * `LaunchedEffect` calls this on every recomposition, but [UiState.itemInfoRequested] makes
+     * every id after the first a no-op instead of re-fetching. A miss (unknown id, or market-server
+     * unreachable) simply leaves the id out of the cache -- callers fall back to showing the bare
+     * itemId, never an error banner, since this is cosmetic enrichment only.
+     */
+    fun ensureItemInfoLoaded(itemId: Int) {
+        if (itemId in ui.itemInfoRequested) return
+        ui = ui.copy(itemInfoRequested = ui.itemInfoRequested + itemId)
+        scope.launch(Dispatchers.Default) {
+            val equipment = marketRepository.getItem(itemId)
+            if (equipment != null) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(itemInfoCache = ui.itemInfoCache + (itemId to equipment))
+                }
+            }
+        }
+    }
+
     /** Start an HDV price capture (kills any running Wakfu, launches tshark + the real game). */
     fun startCapture() {
         scope.launch(Dispatchers.Default) {

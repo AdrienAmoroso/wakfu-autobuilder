@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import me.chosante.common.Equipment
 
 private const val DEFAULT_BASE_URL = "http://localhost:8085"
 
@@ -111,6 +112,27 @@ class MarketRepository(
                     .httpGet(params)
                     .awaitObjectResponse(kotlinxDeserializerOf(loader = CraftCostResponse.serializer(), json = json))
             result
+        }
+
+    /**
+     * Item details (name/rarity/icon id/level/…) for enriching a bare `itemId` in the Market
+     * screen's Prices/Craft Cost tabs -- the same [Equipment] the build optimizer already renders
+     * via `ItemThumbnail`/`RarityIcon`, served by market-server's `/api/items/{id}` off its
+     * existing `EquipmentCatalog` (reusing `equipments.json`, no separate item database). Null on
+     * a 404 (unknown itemId) or any other failure -- this is best-effort enrichment, never on the
+     * critical path for prices/craft cost themselves.
+     */
+    suspend fun getItem(itemId: Int): Equipment? =
+        withContext(ioDispatcher) {
+            try {
+                val (_, _, result) =
+                    "$baseUrl/api/items/$itemId"
+                        .httpGet()
+                        .awaitObjectResponse(kotlinxDeserializerOf(loader = Equipment.serializer(), json = json))
+                result
+            } catch (_: Exception) {
+                null
+            }
         }
 
     suspend fun startCapture(): CaptureStatusResponse =

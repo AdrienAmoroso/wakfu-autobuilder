@@ -13,6 +13,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":common-lib"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.fuel)
     implementation(platform(libs.kotlinx.coroutine.bom))
