@@ -6,12 +6,14 @@ rootProject.name = "wakfu-autobuilder"
 
 include("autobuilder")
 include("equipments-extractor")
+include("recipes-extractor")
 include("spells-extractor")
 include("bdata-extractor")
 include("common-lib")
 include("gui-compose")
 include("zenith-builder")
 include("market-server")
+include("market-client")
 
 // The version catalog lives in the standard `gradle/libs.versions.toml`, which Gradle auto-loads as
 // the `libs` catalog. It used to be declared inline here via `dependencyResolutionManagement {

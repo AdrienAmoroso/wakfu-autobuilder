@@ -16,6 +16,9 @@ import me.chosante.common.Equipment
 import me.chosante.common.Monster
 import me.chosante.common.Rarity
 import me.chosante.common.history.HistoryEntry
+import me.chosante.marketclient.CaptureStatusResponse
+import me.chosante.marketclient.CraftCostResponse
+import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.label
 import me.chosante.ui.theme.WColor
@@ -29,6 +32,14 @@ enum class Phase {
 }
 
 enum class ZenithState {
+    Idle,
+    Loading,
+    Ready,
+    Error,
+}
+
+/** Shared loading status for the Market screen's two independent async actions (list / craft-cost). */
+enum class MarketState {
     Idle,
     Loading,
     Ready,
@@ -87,13 +98,20 @@ enum class PickerMode {
 }
 
 /**
- * The three top-level surfaces. A deliberately tiny router (a `when` in `AppShell`) rather than a
- * navigation library — there are only three screens and state is a single [UiState].
+ * The top-level surfaces. A deliberately tiny router (a `when` in `AppShell`) rather than a
+ * navigation library — there are only a few screens and state is a single [UiState].
  */
 enum class Screen {
     Builder,
     Library,
     Compare,
+    Market,
+}
+
+/** In-screen tabs of [Screen.Market]: the price-observation table, or the craft-cost lookup. */
+enum class MarketTab {
+    PRICES,
+    CRAFT_COST,
 }
 
 /**
@@ -321,6 +339,22 @@ data class UiState(
     val libraryFolder: LibraryFolderFilter = LibraryFolderFilter.All,
     /** Whether the library groups its cards by class; persisted across launches. */
     val libraryGroupByClass: Boolean = false,
+    // --- Market (HDV price observations + craft cost) --- Active in-screen tab of [Screen.Market].
+    val marketTab: MarketTab = MarketTab.PRICES,
+    /** Optional itemId text filter for the observations list. In-memory only. */
+    val marketItemIdFilter: String = "",
+    /** Most recently loaded observations for [marketItemIdFilter] (or the latest N overall if blank). */
+    val marketObservations: List<ObservationResponse> = emptyList(),
+    val marketLoadState: MarketState = MarketState.Idle,
+    /** ItemId the user is looking up craft cost for. In-memory only. */
+    val craftCostItemId: String = "",
+    val craftCostResult: CraftCostResponse? = null,
+    val craftCostState: MarketState = MarketState.Idle,
+    /**
+     * HDV price capture status, polled from market-server while a capture is running. Null =
+     * never queried yet -- refreshed once when the Market screen is opened.
+     */
+    val captureStatus: CaptureStatusResponse? = null,
 )
 
 /**

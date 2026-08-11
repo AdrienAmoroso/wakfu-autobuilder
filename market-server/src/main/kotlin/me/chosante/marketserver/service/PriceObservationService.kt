@@ -7,6 +7,7 @@ import me.chosante.marketserver.dto.ObservationResponse
 import me.chosante.marketserver.dto.UpdatePricesRequest
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -121,11 +122,16 @@ object PriceObservationService {
     fun latestForItem(
         db: Database,
         itemId: Int,
+        server: String? = null,
     ): ObservationResponse? =
         transaction(db) {
-            PriceObservations
-                .selectAll()
-                .where { PriceObservations.itemId eq itemId }
+            val query =
+                if (server != null) {
+                    PriceObservations.selectAll().where { (PriceObservations.itemId eq itemId) and (PriceObservations.server eq server) }
+                } else {
+                    PriceObservations.selectAll().where { PriceObservations.itemId eq itemId }
+                }
+            query
                 .orderBy(PriceObservations.id, SortOrder.DESC)
                 .limit(1)
                 .map { it.toObservationResponse() }

@@ -355,6 +355,7 @@ private fun NavTabs(
     ) {
         NavTab(label = tr(Tr.NAV_BUILDER), selected = current == Screen.Builder, onClick = { onNavigate(Screen.Builder) })
         NavTab(label = tr(Tr.NAV_LIBRARY), selected = current == Screen.Library || current == Screen.Compare, onClick = { onNavigate(Screen.Library) })
+        NavTab(label = tr(Tr.NAV_MARKET), selected = current == Screen.Market, onClick = { onNavigate(Screen.Market) })
     }
 }
 

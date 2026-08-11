@@ -360,6 +360,7 @@ enum class Tr(
     // Navigation / active build
     NAV_BUILDER("Builder", "Builder"),
     NAV_LIBRARY("My Builds", "Mes builds"),
+    NAV_MARKET("Market", "Marché"),
     NEW_BUILD("＋ New", "＋ Nouveau"),
     ACTIVE_BUILD_EDITING("Editing", "Édition"),
     BACK("Back", "Retour"),

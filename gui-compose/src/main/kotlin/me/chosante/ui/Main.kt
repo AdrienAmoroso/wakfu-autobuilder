@@ -21,6 +21,11 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
+import io.ktor.server.application.Application
+import io.ktor.server.engine.EmbeddedServer
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
 import me.chosante.autobuilder.genetic.wakfu.MaxDamageSearch
 import me.chosante.ui.components.RequestErrorsDialog
 import me.chosante.ui.components.WhatsNewDialog
@@ -38,6 +43,8 @@ import java.awt.GraphicsEnvironment
 import java.awt.Taskbar
 import javax.imageio.ImageIO
 import kotlin.time.Duration.Companion.milliseconds
+import me.chosante.marketserver.Config as MarketServerConfig
+import me.chosante.marketserver.module as marketServerModule
 
 const val SCREENSHOT_PATH_PROPERTY = "wakfu.compose.screenshot"
 
@@ -47,6 +54,12 @@ private const val APP_ICON_PATH = "assets/branding/app-icon.png"
 fun main() {
     MaxDamageSearch.enableCertificateDiskCache()
     setDockIcon()
+    val marketServerEngine = startEmbeddedMarketServer()
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            runCatching { marketServerEngine?.stop(gracePeriodMillis = 200, timeoutMillis = 1000) }
+        }
+    )
     application {
         val screenshotPath = System.getProperty(SCREENSHOT_PATH_PROPERTY) ?: System.getenv("WAKFU_COMPOSE_SCREENSHOT")
         val appIcon = remember { loadClasspathBitmap(APP_ICON_PATH)?.let(::BitmapPainter) }
@@ -172,6 +185,25 @@ private fun setDockIcon() {
         // Best-effort: a missing dock icon must never stop the app from launching.
     }
 }
+
+/**
+ * Boots market-server's Ktor engine inside this same JVM, on a background thread, so the app is
+ * one thing to launch -- no separate `:market-server:run` terminal to keep open. `market-client`
+ * (what [me.chosante.ui.state.BuildSearchModel] actually talks to) already targets
+ * `http://localhost:8085` unconditionally, matching [MarketServerConfig.httpPort]'s default, so no
+ * wiring changes are needed there.
+ * Best-effort and non-fatal: if the port is already taken -- e.g. market-server is already running
+ * standalone, or a previous instance's process hasn't released it yet -- the market features simply
+ * won't respond and the rest of the app (the actual build solver) must keep working regardless.
+ */
+private fun startEmbeddedMarketServer(): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? =
+    try {
+        embeddedServer(Netty, port = MarketServerConfig.httpPort, module = Application::marketServerModule)
+            .start(wait = false)
+    } catch (e: Exception) {
+        System.err.println("[market-server] failed to start embedded server: ${e.message}")
+        null
+    }
 
 @Composable
 fun App(model: BuildSearchModel) {

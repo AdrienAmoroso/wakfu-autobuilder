@@ -42,6 +42,7 @@ import me.chosante.ui.history.LibraryScreen
 import me.chosante.ui.i18n.LocalLang
 import me.chosante.ui.i18n.Tr
 import me.chosante.ui.i18n.tr
+import me.chosante.ui.market.MarketScreen
 import me.chosante.ui.paperdoll.PaperdollPanel
 import me.chosante.ui.request.RequestPanel
 import me.chosante.ui.spells.ClassSpellsPanel
@@ -148,6 +149,22 @@ fun AppShell(
                                 onClear = model::clearCompareSlot,
                                 onAdd = model::addCompareSlot,
                                 onBack = { model.goToScreen(Screen.Library) }
+                            )
+
+                        Screen.Market ->
+                            MarketScreen(
+                                ui = ui,
+                                onSelectTab = model::setMarketTab,
+                                onItemIdFilterChange = model::setMarketItemIdFilter,
+                                onLoadObservations = model::loadMarketObservations,
+                                onCreateObservation = model::createMarketObservation,
+                                onDeleteObservation = model::deleteMarketObservation,
+                                onUpdatePrices = model::updateMarketPrices,
+                                onSetFlag = model::setMarketFlag,
+                                onCraftCostItemIdChange = model::setCraftCostItemId,
+                                onLookupCraftCost = model::lookupCraftCost,
+                                onStartCapture = model::startCapture,
+                                onStopCapture = model::stopCapture
                             )
                     }
                 }

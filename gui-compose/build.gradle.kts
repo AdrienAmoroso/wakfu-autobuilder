@@ -35,6 +35,25 @@ dependencies {
     }
     implementation(project(":zenith-builder"))
     implementation(project(":common-lib"))
+    // market-server HTTP client (Prices/Craft-cost screen): a separate module (not compiled inside
+    // gui-compose) because applying kotlin("plugin.serialization") directly in this module hits a
+    // real Kotlin/Compose Multiplatform Gradle plugin conflict -- the serialization compiler plugin
+    // reports "current kotlinx.serialization core version is unknown" for any @Serializable class
+    // declared here, regardless of dependency versions/forcing (reproduced with a clean daemon-less
+    // build; see https://github.com/JetBrains/compose-multiplatform/issues/3479 for the underlying
+    // class of bug). market-client sidesteps it by mirroring zenith-builder's already-working
+    // kotlin("plugin.serialization") + Fuel setup in a module gui-compose only ever *consumes*.
+    implementation(project(":market-client"))
+    // market-server itself, embedded directly in this process (see Main.kt's
+    // startEmbeddedMarketServer) so the app is a single thing to launch -- no separate terminal/
+    // process to manage. A project dependency only (no new @Serializable classes declared in
+    // gui-compose itself), so this doesn't reintroduce the kotlin("plugin.serialization") conflict
+    // that motivated splitting market-client out in the first place.
+    implementation(project(":market-server"))
+    // market-server declares Ktor as `implementation`, not `api` -- it has no business exposing
+    // its HTTP framework to normal callers. gui-compose is the one exception that needs the
+    // engine types directly (embeddedServer/Netty/Application) to boot it in-process.
+    implementation(libs.bundles.ktor.server)
     implementation(libs.kotlinx.serialization.json)
     implementation(compose.desktop.currentOs) // host Compose/Skiko for :gui-compose:run / :test
     implementation(libs.compose.material3)

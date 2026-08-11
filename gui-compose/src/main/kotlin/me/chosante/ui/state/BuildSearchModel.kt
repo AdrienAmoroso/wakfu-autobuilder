@@ -41,6 +41,10 @@ import me.chosante.common.Monster
 import me.chosante.common.Rarity
 import me.chosante.common.history.HistoryEntry
 import me.chosante.createZenithBuild
+import me.chosante.marketclient.CreateObservationRequest
+import me.chosante.marketclient.FlagMotif
+import me.chosante.marketclient.MarketRepository
+import me.chosante.marketclient.UpdatePricesRequest
 import me.chosante.ui.components.BreedAssets
 import me.chosante.ui.components.IconPreloader
 import me.chosante.ui.components.warmUpPaths
@@ -126,6 +130,7 @@ class BuildSearchModel(
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Swing,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val historyRepository: HistoryRepository = HistoryRepository(),
+    private val marketRepository: MarketRepository = MarketRepository(),
     /** Persisted library view options (sort + group-by-class). Injectable for tests. */
     private val libraryPreferences: LibraryPreferences = LibraryPreferences(),
     /** Wakfu game-data version stamped onto saved builds (injectable for tests). */
@@ -172,6 +177,10 @@ class BuildSearchModel(
     // already finished), so it has its own handle — cancelled when a new search starts.
     private var proofJob: Job? = null
 
+    // Polls market-server's capture status while a capture is running (started by startCapture()/
+    // stopCapture(), restarted by refreshCaptureStatus() when the Market screen is (re)opened).
+    private var captureJob: Job? = null
+
     // B8: cancelling [proofJob] only stops the coroutine, not the blocking certifier DP running inside it (which
     // can hold a core for minutes). This flag — set at every proof-cancel site, polled once per certifier DP
     // stage — makes the DP bail promptly. AtomicBoolean because the parallel exact tier polls it off pool threads.
@@ -210,6 +219,11 @@ class BuildSearchModel(
         System.getProperty("wakfu.compose.screenshot.varyPriority") != null ||
             System.getenv("WAKFU_COMPOSE_SCREENSHOT_VARY_PRIORITY") != null
 
+    /** Screenshot-only: land on the Market screen (Prices tab, loaded) instead of running a search. */
+    private val screenshotMarketScreen =
+        System.getProperty("wakfu.compose.screenshot.market") != null ||
+            System.getenv("WAKFU_COMPOSE_SCREENSHOT_MARKET") != null
+
     init {
         // Seed the persisted UI options (language + library view) + tag registry before any UI reads them.
         tagRegistry = libraryPreferences.loadTags()
@@ -240,7 +254,12 @@ class BuildSearchModel(
                 ui = ui.copy(targets = ui.targets.mapIndexed { index, target -> target.copy(weight = (index % 5) + 1) })
             }
             screenshotExcludedRarities()?.let { ui = ui.copy(excludedRarities = it) }
-            search()
+            if (screenshotMarketScreen) {
+                ui = ui.copy(screen = Screen.Market)
+                loadMarketObservations()
+            } else {
+                search()
+            }
         } else {
             // Pay OR-Tools' one-time cold start behind the loading screen, so the first real search
             // starts warm and the heavy main UI only mounts once the native library is loaded (no
@@ -1258,6 +1277,185 @@ class BuildSearchModel(
         }
     }
 
+    // --- Market (HDV price observations + craft cost) ---
+    // Every function below follows the same "click -> suspend HTTP call -> update UI state" shape
+    // as createZenithLink above: set a loading state synchronously, launch off the UI thread, and
+    // land the result (or a market-server-not-running error, indistinguishable from any other
+    // network failure) back on mainDispatcher.
+
+    fun setMarketTab(tab: MarketTab) {
+        ui = ui.copy(marketTab = tab)
+    }
+
+    fun setMarketItemIdFilter(value: String) {
+        ui = ui.copy(marketItemIdFilter = value.onlyDigits())
+    }
+
+    fun setCraftCostItemId(value: String) {
+        ui = ui.copy(craftCostItemId = value.onlyDigits())
+    }
+
+    fun loadMarketObservations() {
+        ui = ui.copy(marketLoadState = MarketState.Loading, error = null)
+        val itemId = ui.marketItemIdFilter.toIntOrNull()
+        scope.launch(Dispatchers.Default) {
+            try {
+                val observations = marketRepository.listObservations(itemId = itemId)
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketObservations = observations, marketLoadState = MarketState.Ready)
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketLoadState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+                }
+            }
+        }
+    }
+
+    fun createMarketObservation(request: CreateObservationRequest) {
+        ui = ui.copy(marketLoadState = MarketState.Loading, error = null)
+        scope.launch(Dispatchers.Default) {
+            try {
+                marketRepository.createObservation(request)
+                val observations = marketRepository.listObservations(itemId = ui.marketItemIdFilter.toIntOrNull())
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketObservations = observations, marketLoadState = MarketState.Ready, toast = "Observation created")
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketLoadState = MarketState.Error, error = exception.message ?: "Could not create observation")
+                }
+            }
+        }
+    }
+
+    fun deleteMarketObservation(id: Int) {
+        scope.launch(Dispatchers.Default) {
+            try {
+                marketRepository.deleteObservation(id)
+                val observations = marketRepository.listObservations(itemId = ui.marketItemIdFilter.toIntOrNull())
+                withContext(mainDispatcher) { ui = ui.copy(marketObservations = observations) }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not delete observation") }
+            }
+        }
+    }
+
+    fun updateMarketPrices(
+        id: Int,
+        minPrice: Long,
+        avgPrice: Long,
+        medianPrice: Long?,
+    ) {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val updated = marketRepository.updatePrices(id, UpdatePricesRequest(minPrice, avgPrice, medianPrice))
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketObservations = ui.marketObservations.map { if (it.id == id) updated else it })
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not update prices") }
+            }
+        }
+    }
+
+    fun setMarketFlag(
+        id: Int,
+        motif: FlagMotif,
+    ) {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val updated = marketRepository.setFlag(id, motif)
+                withContext(mainDispatcher) {
+                    ui = ui.copy(marketObservations = ui.marketObservations.map { if (it.id == id) updated else it })
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not flag observation") }
+            }
+        }
+    }
+
+    fun lookupCraftCost() {
+        val itemId = ui.craftCostItemId.toIntOrNull() ?: return
+        ui = ui.copy(craftCostState = MarketState.Loading, craftCostResult = null, error = null)
+        scope.launch(Dispatchers.Default) {
+            try {
+                val result = marketRepository.craftCost(itemId)
+                withContext(mainDispatcher) {
+                    ui = ui.copy(craftCostResult = result, craftCostState = MarketState.Ready)
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(craftCostState = MarketState.Error, error = exception.message ?: "Could not compute craft cost")
+                }
+            }
+        }
+    }
+
+    /** Start an HDV price capture (kills any running Wakfu, launches tshark + the real game). */
+    fun startCapture() {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val status = marketRepository.startCapture()
+                withContext(mainDispatcher) { ui = ui.copy(captureStatus = status) }
+                if (status.phase == "capturing") pollCaptureStatusUntilTerminal()
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not start capture") }
+            }
+        }
+    }
+
+    /** Stop the running capture; market-server kills tshark and parses+imports what was captured. */
+    fun stopCapture() {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val status = marketRepository.stopCapture()
+                withContext(mainDispatcher) { ui = ui.copy(captureStatus = status) }
+                if (status.phase == "processing") pollCaptureStatusUntilTerminal()
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not stop capture") }
+            }
+        }
+    }
+
+    /** One-shot status fetch -- called when the Market screen is (re)opened, see [goToScreen]. */
+    fun refreshCaptureStatus() {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val status = marketRepository.captureStatus()
+                withContext(mainDispatcher) { ui = ui.copy(captureStatus = status) }
+                if (status.phase == "capturing" || status.phase == "processing") pollCaptureStatusUntilTerminal()
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not reach market-server") }
+            }
+        }
+    }
+
+    /** Polls every 3s while capturing/processing; stops itself once idle/error and refreshes the Prices table. */
+    private fun pollCaptureStatusUntilTerminal() {
+        captureJob?.cancel()
+        captureJob =
+            scope.launch(Dispatchers.Default) {
+                while (isActive) {
+                    delay(3.seconds)
+                    val status =
+                        try {
+                            marketRepository.captureStatus()
+                        } catch (exception: Exception) {
+                            withContext(mainDispatcher) {
+                                ui = ui.copy(error = exception.message ?: "Could not reach market-server")
+                            }
+                            return@launch
+                        }
+                    withContext(mainDispatcher) { ui = ui.copy(captureStatus = status) }
+                    if (status.phase != "capturing" && status.phase != "processing") {
+                        loadMarketObservations()
+                        return@launch
+                    }
+                }
+            }
+    }
+
     private fun UiState.toTargetStats(): TargetStats {
         val raw = targets.map { TargetStat(it.characteristic, it.value.toIntOrNull() ?: 0, it.weight) }
         // Most-masteries only: split a single "all resistances" target into the four per-element ones
@@ -1317,6 +1515,12 @@ class BuildSearchModel(
 
     fun goToScreen(screen: Screen) {
         ui = ui.copy(screen = screen)
+        // Capture keeps running server-side independent of the GUI, so re-entering the Market
+        // screen (after navigating away, or after an app restart) must pick up the true state --
+        // not assume it's still whatever it was when we last left.
+        if (screen == Screen.Market) {
+            refreshCaptureStatus()
+        }
     }
 
     /** Switch the result region between the discovered build and the class's spells & passives. */
