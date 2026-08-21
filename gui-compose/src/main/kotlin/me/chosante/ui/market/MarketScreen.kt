@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,30 +36,37 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import me.chosante.common.Equipment
+import me.chosante.common.Rarity
 import me.chosante.marketclient.CaptureStatusResponse
 import me.chosante.marketclient.CreateObservationRequest
 import me.chosante.marketclient.FlagMotif
+import me.chosante.marketclient.ItemInfoResponse
+import me.chosante.marketclient.ItemSearchResult
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.components.Hairline
+import me.chosante.ui.components.InfoTip
 import me.chosante.ui.components.ItemThumbnail
 import me.chosante.ui.components.RarityIcon
 import me.chosante.ui.components.localized
 import me.chosante.ui.i18n.Lang
+import me.chosante.ui.i18n.label
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.MarketTab
 import me.chosante.ui.state.UiState
+import me.chosante.ui.state.color
 import me.chosante.ui.theme.WColor
 import me.chosante.ui.theme.WDimens
 import me.chosante.ui.theme.WTypography
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
 
 @Composable
 fun MarketScreen(
     ui: UiState,
     onSelectTab: (MarketTab) -> Unit,
-    onItemIdFilterChange: (String) -> Unit,
-    onLoadObservations: () -> Unit,
     onCreateObservation: (CreateObservationRequest) -> Unit,
     onDeleteObservation: (Int) -> Unit,
     onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
@@ -68,6 +76,11 @@ fun MarketScreen(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onRequestItemInfo: (Int) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onMinLevelChange: (String) -> Unit,
+    onMaxLevelChange: (String) -> Unit,
+    onToggleRarityFilter: (Rarity) -> Unit,
+    onToggleExpandedItem: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(WColor.bg)) {
         MarketTabHeader(current = ui.marketTab, onSelect = onSelectTab)
@@ -76,15 +89,17 @@ fun MarketScreen(
                 MarketTab.PRICES ->
                     PricesTab(
                         ui = ui,
-                        onItemIdFilterChange = onItemIdFilterChange,
-                        onLoadObservations = onLoadObservations,
                         onCreateObservation = onCreateObservation,
                         onDeleteObservation = onDeleteObservation,
                         onUpdatePrices = onUpdatePrices,
                         onSetFlag = onSetFlag,
                         onStartCapture = onStartCapture,
                         onStopCapture = onStopCapture,
-                        onRequestItemInfo = onRequestItemInfo
+                        onSearchQueryChange = onSearchQueryChange,
+                        onMinLevelChange = onMinLevelChange,
+                        onMaxLevelChange = onMaxLevelChange,
+                        onToggleRarityFilter = onToggleRarityFilter,
+                        onToggleExpandedItem = onToggleExpandedItem
                     )
 
                 MarketTab.CRAFT_COST ->
@@ -197,59 +212,122 @@ private fun SmallTextField(
 @Composable
 private fun PricesTab(
     ui: UiState,
-    onItemIdFilterChange: (String) -> Unit,
-    onLoadObservations: () -> Unit,
     onCreateObservation: (CreateObservationRequest) -> Unit,
     onDeleteObservation: (Int) -> Unit,
     onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
     onSetFlag: (Int, FlagMotif) -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
-    onRequestItemInfo: (Int) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onMinLevelChange: (String) -> Unit,
+    onMaxLevelChange: (String) -> Unit,
+    onToggleRarityFilter: (Rarity) -> Unit,
+    onToggleExpandedItem: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         CaptureBar(status = ui.captureStatus, onStart = onStartCapture, onStop = onStopCapture)
         Spacer(modifier = Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SmallTextField(
-                value = ui.marketItemIdFilter,
-                onValueChange = onItemIdFilterChange,
-                placeholder = "Filter by itemId",
-                modifier = Modifier.width(200.dp)
-            )
-            SmallButton(text = "Load", onClick = onLoadObservations, filled = true)
-            if (ui.marketLoadState == MarketState.Loading) {
-                Text(text = "Loading…", style = WTypography.labelSmall.copy(color = WColor.muted))
-            }
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        NewObservationForm(itemIdFilter = ui.marketItemIdFilter, onCreate = onCreateObservation)
+        MarketSearchBar(
+            query = ui.marketSearchQuery,
+            minLevel = ui.marketMinLevel,
+            maxLevel = ui.marketMaxLevel,
+            selectedRarities = ui.marketRarityFilter,
+            lang = ui.lang,
+            onQueryChange = onSearchQueryChange,
+            onMinLevelChange = onMinLevelChange,
+            onMaxLevelChange = onMaxLevelChange,
+            onToggleRarity = onToggleRarityFilter
+        )
         Spacer(modifier = Modifier.height(14.dp))
         when {
-            ui.marketLoadState == MarketState.Error ->
-                MarketMessageCard(
-                    title = "Can't reach market-server",
-                    hint = ui.error ?: "Start it with ./gradlew :market-server:run"
-                )
-
-            ui.marketObservations.isEmpty() && ui.marketLoadState == MarketState.Ready ->
-                MarketMessageCard(title = "No observations", hint = "Try loading without a filter, or create one above.")
-
-            else ->
+            // A background refresh (e.g. after saving a price) failing must never blank out an
+            // already-good list -- prefer showing what's still on screen over an error card, even
+            // if marketSearchState flipped to Error in the meantime.
+            ui.marketSearchResults.isNotEmpty() ->
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(ui.marketObservations, key = { it.id }) { observation ->
-                        ObservationRow(
-                            observation = observation,
-                            equipment = ui.itemInfoCache[observation.itemId],
+                    items(ui.marketSearchResults, key = { it.item.itemId }) { result ->
+                        ItemSearchResultCard(
+                            result = result,
                             lang = ui.lang,
-                            onRequestItemInfo = onRequestItemInfo,
-                            onDelete = { onDeleteObservation(observation.id) },
+                            expanded = ui.marketExpandedItemId == result.item.itemId,
+                            observations = if (ui.marketExpandedItemId == result.item.itemId) ui.marketObservations else emptyList(),
+                            observationsLoading = ui.marketExpandedItemId == result.item.itemId && ui.marketLoadState == MarketState.Loading,
+                            onToggleExpanded = { onToggleExpandedItem(result.item.itemId) },
+                            onCreateObservation = onCreateObservation,
+                            onDeleteObservation = onDeleteObservation,
                             onUpdatePrices = onUpdatePrices,
                             onSetFlag = onSetFlag
                         )
                     }
                 }
+
+            ui.marketSearchState == MarketState.Error ->
+                MarketMessageCard(
+                    title = "Can't reach market-server",
+                    hint = ui.error ?: "Start it with ./gradlew :market-server:run"
+                )
+
+            ui.marketSearchState == MarketState.Ready ->
+                MarketMessageCard(title = "No items match", hint = "Try a broader name, level range, or fewer rarity filters.")
         }
+    }
+}
+
+@Composable
+private fun MarketSearchBar(
+    query: String,
+    minLevel: String,
+    maxLevel: String,
+    selectedRarities: Set<Rarity>,
+    lang: Lang,
+    onQueryChange: (String) -> Unit,
+    onMinLevelChange: (String) -> Unit,
+    onMaxLevelChange: (String) -> Unit,
+    onToggleRarity: (Rarity) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(WDimens.radius))
+                .background(WColor.surface)
+                .border(1.dp, WColor.border, RoundedCornerShape(WDimens.radius))
+                .padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SmallTextField(value = query, onValueChange = onQueryChange, placeholder = "Search by name…", modifier = Modifier.weight(1f))
+            SmallTextField(value = minLevel, onValueChange = onMinLevelChange, placeholder = "Min lvl", modifier = Modifier.width(90.dp))
+            SmallTextField(value = maxLevel, onValueChange = onMaxLevelChange, placeholder = "Max lvl", modifier = Modifier.width(90.dp))
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Rarity.entries.forEach { rarity ->
+                RarityChip(rarity = rarity, lang = lang, selected = rarity in selectedRarities, onClick = { onToggleRarity(rarity) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun RarityChip(
+    rarity: Rarity,
+    lang: Lang,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(if (selected) rarity.color().copy(alpha = 0.22f) else WColor.bg)
+                .border(1.dp, if (selected) rarity.color() else WColor.border, RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        RarityIcon(rarity = rarity, size = 11.dp)
+        Text(text = rarity.label(lang), style = WTypography.labelSmall.copy(color = if (selected) WColor.text else WColor.muted))
     }
 }
 
@@ -295,6 +373,27 @@ private fun elapsedLabel(startedAt: Long?): String {
     return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }
 
+/**
+ * Best-effort "N ago" for an observation's `observedAt` -- tolerant of the handful of timestamp
+ * shapes in play (manual entries stamp `LocalDateTime.now().toString()`; the external capture
+ * pipeline's own format isn't controlled by this repo). Falls back to the raw string rather than
+ * guessing or crashing when it doesn't parse.
+ */
+private fun observedAgoLabel(observedAt: String): String {
+    val parsed =
+        runCatching { LocalDateTime.parse(observedAt) }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(observedAt).toLocalDateTime() }.getOrNull()
+            ?: runCatching { Instant.parse(observedAt).atZone(ZoneId.systemDefault()).toLocalDateTime() }.getOrNull()
+            ?: return observedAt
+    val minutes = Duration.between(parsed, LocalDateTime.now()).toMinutes().coerceAtLeast(0)
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        minutes < 60 * 24 -> "${minutes / 60}h ago"
+        else -> "${minutes / (60 * 24)}d ago"
+    }
+}
+
 @Composable
 private fun MarketMessageCard(
     title: String,
@@ -316,74 +415,187 @@ private fun MarketMessageCard(
     }
 }
 
+/**
+ * One row of the HDV-style browse list: the item itself, its latest known price (or "No price
+ * captured yet"), and — expanded — its full observation history with edit/flag/delete and a form to
+ * add a missing price by hand. This is the Prices tab's main content, replacing a flat table of raw
+ * observation rows with an item-first view closer to the in-game auction house.
+ */
 @Composable
-private fun NewObservationForm(
-    itemIdFilter: String,
-    onCreate: (CreateObservationRequest) -> Unit,
+private fun ItemSearchResultCard(
+    result: ItemSearchResult,
+    lang: Lang,
+    expanded: Boolean,
+    observations: List<ObservationResponse>,
+    observationsLoading: Boolean,
+    onToggleExpanded: () -> Unit,
+    onCreateObservation: (CreateObservationRequest) -> Unit,
+    onDeleteObservation: (Int) -> Unit,
+    onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
+    onSetFlag: (Int, FlagMotif) -> Unit,
 ) {
-    var itemId by remember { mutableStateOf(itemIdFilter) }
-    var server by remember { mutableStateOf("") }
-    var minPrice by remember { mutableStateOf("") }
-    var avgPrice by remember { mutableStateOf("") }
-
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(WDimens.radius))
+                .clip(RoundedCornerShape(9.dp))
                 .background(WColor.surface)
-                .border(1.dp, WColor.border, RoundedCornerShape(WDimens.radius))
-                .padding(14.dp)
+                .border(1.dp, if (expanded) WColor.accent else WColor.hairline, RoundedCornerShape(9.dp))
     ) {
-        Text(text = "New observation", style = WTypography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            SmallTextField(value = itemId, onValueChange = { itemId = it.filter(Char::isDigit) }, placeholder = "itemId", modifier = Modifier.width(100.dp))
-            SmallTextField(value = server, onValueChange = { server = it }, placeholder = "server", modifier = Modifier.width(120.dp))
-            SmallTextField(
-                value = minPrice,
-                onValueChange = { minPrice = it.filter(Char::isDigit) },
-                placeholder = "min price",
-                modifier = Modifier.width(110.dp)
-            )
-            SmallTextField(
-                value = avgPrice,
-                onValueChange = { avgPrice = it.filter(Char::isDigit) },
-                placeholder = "avg price",
-                modifier = Modifier.width(110.dp)
-            )
-            SmallButton(
-                text = "Create",
-                filled = true,
-                onClick = {
-                    val id = itemId.toIntOrNull() ?: return@SmallButton
-                    val min = minPrice.toLongOrNull() ?: return@SmallButton
-                    val avg = avgPrice.toLongOrNull() ?: min
-                    onCreate(
-                        CreateObservationRequest(
-                            itemId = id,
-                            server = server.ifBlank { "manual" },
-                            observedAt = LocalDateTime.now().toString(),
-                            source = "manual_entry",
-                            confidenceScore = 1.0,
-                            minPrice = min,
-                            avgPrice = avg
-                        )
-                    )
-                    minPrice = ""
-                    avgPrice = ""
-                }
-            )
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleExpanded)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ItemInfoBadge(item = result.item, lang = lang, modifier = Modifier.widthIn(min = 220.dp))
+            PriceSummary(result = result, modifier = Modifier.weight(1f))
+            Text(text = if (expanded) "▲" else "▼", style = WTypography.labelMedium.copy(color = WColor.muted))
         }
+        if (expanded) {
+            Hairline()
+            Column(modifier = Modifier.padding(12.dp)) {
+                ObservationHistoryPanel(
+                    itemId = result.item.itemId,
+                    observations = observations,
+                    loading = observationsLoading,
+                    onCreateObservation = onCreateObservation,
+                    onDeleteObservation = onDeleteObservation,
+                    onUpdatePrices = onUpdatePrices,
+                    onSetFlag = onSetFlag
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PriceSummary(
+    result: ItemSearchResult,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (result.latestMinPrice == null) {
+            Text(text = "No price captured yet", style = WTypography.bodySmall.copy(color = WColor.faint))
+        } else {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Lowest ${result.latestMinPrice} · Average ${result.latestAvgPrice}",
+                        style = WTypography.bodyMedium
+                    )
+                    InfoTip(
+                        text =
+                            "From the most recent HDV capture for this item: \"Lowest\" is the cheapest listing seen, " +
+                                "\"Average\" is the mean of every listing seen in that same capture."
+                    )
+                }
+                Text(
+                    text =
+                        listOfNotNull(result.latestServer, result.latestObservedAt?.let { observedAgoLabel(it) })
+                            .joinToString(" · "),
+                    style = WTypography.labelSmall.copy(color = WColor.muted)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The expanded item's full price-observation history: one row per capture session (or manual
+ * entry), each independently editable/flaggable/deletable, plus a compact form to add a price by
+ * hand when the item was never captured.
+ */
+@Composable
+private fun ObservationHistoryPanel(
+    itemId: Int,
+    observations: List<ObservationResponse>,
+    loading: Boolean,
+    onCreateObservation: (CreateObservationRequest) -> Unit,
+    onDeleteObservation: (Int) -> Unit,
+    onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
+    onSetFlag: (Int, FlagMotif) -> Unit,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Price history", style = WTypography.titleMedium)
+            InfoTip(text = "Every capture session for this item, most recent first. Edit a row's numbers and hit Save to correct a misread price.")
+            if (loading) Text(text = "Loading…", style = WTypography.labelSmall.copy(color = WColor.muted))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        if (observations.isEmpty() && !loading) {
+            Text(text = "No observations yet for this item.", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Spacer(modifier = Modifier.height(8.dp))
+        } else {
+            observations.forEach { observation ->
+                ObservationRow(
+                    observation = observation,
+                    onDelete = { onDeleteObservation(observation.id) },
+                    onUpdatePrices = onUpdatePrices,
+                    onSetFlag = onSetFlag
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        AddObservationForm(itemId = itemId, onCreate = onCreateObservation)
+    }
+}
+
+@Composable
+private fun AddObservationForm(
+    itemId: Int,
+    onCreate: (CreateObservationRequest) -> Unit,
+) {
+    var server by remember(itemId) { mutableStateOf("") }
+    var minPrice by remember(itemId) { mutableStateOf("") }
+    var avgPrice by remember(itemId) { mutableStateOf("") }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Add a price by hand:", style = WTypography.bodySmall.copy(color = WColor.muted))
+        SmallTextField(value = server, onValueChange = { server = it }, placeholder = "server", modifier = Modifier.width(120.dp))
+        SmallTextField(
+            value = minPrice,
+            onValueChange = { minPrice = it.filter(Char::isDigit) },
+            placeholder = "lowest price",
+            modifier = Modifier.width(110.dp)
+        )
+        SmallTextField(
+            value = avgPrice,
+            onValueChange = { avgPrice = it.filter(Char::isDigit) },
+            placeholder = "average price",
+            modifier = Modifier.width(120.dp)
+        )
+        SmallButton(
+            text = "Add",
+            filled = true,
+            onClick = {
+                val min = minPrice.toLongOrNull() ?: return@SmallButton
+                val avg = avgPrice.toLongOrNull() ?: min
+                onCreate(
+                    CreateObservationRequest(
+                        itemId = itemId,
+                        server = server.ifBlank { "manual" },
+                        observedAt = LocalDateTime.now().toString(),
+                        source = "manual_entry",
+                        confidenceScore = 1.0,
+                        minPrice = min,
+                        avgPrice = avg
+                    )
+                )
+                minPrice = ""
+                avgPrice = ""
+            }
+        )
     }
 }
 
 @Composable
 private fun ObservationRow(
     observation: ObservationResponse,
-    equipment: Equipment?,
-    lang: Lang,
-    onRequestItemInfo: (Int) -> Unit,
     onDelete: () -> Unit,
     onUpdatePrices: (Int, Long, Long, Long?) -> Unit,
     onSetFlag: (Int, FlagMotif) -> Unit,
@@ -397,50 +609,77 @@ private fun ObservationRow(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(9.dp))
-                .background(WColor.surface)
+                .background(WColor.bg)
                 .border(1.dp, WColor.hairline, RoundedCornerShape(9.dp))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        ItemBadge(
-            itemId = observation.itemId,
-            equipment = equipment,
-            lang = lang,
-            onRequestItemInfo = onRequestItemInfo,
-            modifier = Modifier.widthIn(min = 200.dp)
-        )
-        Text(text = observation.server.ifBlank { "—" }, style = WTypography.bodySmall.copy(color = WColor.muted), modifier = Modifier.widthIn(min = 70.dp))
-        SmallTextField(value = minPriceText, onValueChange = { minPriceText = it.filter(Char::isDigit) }, placeholder = "min", modifier = Modifier.width(90.dp))
-        SmallTextField(value = avgPriceText, onValueChange = { avgPriceText = it.filter(Char::isDigit) }, placeholder = "avg", modifier = Modifier.width(90.dp))
-        SmallButton(
-            text = "Save",
-            onClick = {
-                val min = minPriceText.toLongOrNull() ?: return@SmallButton
-                val avg = avgPriceText.toLongOrNull() ?: return@SmallButton
-                onUpdatePrices(observation.id, min, avg, observation.medianPrice)
-            }
-        )
+        Column(modifier = Modifier.widthIn(min = 110.dp)) {
+            Text(text = observation.server.ifBlank { "—" }, style = WTypography.bodySmall)
+            Text(text = observedAgoLabel(observation.observedAt), style = WTypography.labelSmall.copy(color = WColor.muted))
+        }
+        LabeledField(label = "Lowest", value = minPriceText, onValueChange = { minPriceText = it.filter(Char::isDigit) })
+        LabeledField(label = "Average", value = avgPriceText, onValueChange = { avgPriceText = it.filter(Char::isDigit) })
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            SmallButton(
+                text = "Save",
+                onClick = {
+                    val min = minPriceText.toLongOrNull() ?: return@SmallButton
+                    val avg = avgPriceText.toLongOrNull() ?: return@SmallButton
+                    onUpdatePrices(observation.id, min, avg, observation.medianPrice)
+                }
+            )
+            InfoTip(text = "Corrects this row's prices, e.g. if the capture misread a digit. The original comment is kept, marked [corrected_manually].")
+        }
         Text(
             text = observation.comment?.takeIf { it.isNotBlank() } ?: "",
             style = WTypography.bodySmall.copy(color = WColor.muted),
             modifier = Modifier.weight(1f)
         )
-        Box {
-            SmallButton(text = "Flag", onClick = { flagMenuOpen = true })
-            DropdownMenu(expanded = flagMenuOpen, onDismissRequest = { flagMenuOpen = false }, containerColor = WColor.surface) {
-                FlagMotif.entries.forEach { motif ->
-                    DropdownMenuItem(
-                        text = { Text(text = motif.name.lowercase(), style = WTypography.bodyMedium) },
-                        onClick = {
-                            onSetFlag(observation.id, motif)
-                            flagMenuOpen = false
-                        }
-                    )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box {
+                SmallButton(text = "Flag", onClick = { flagMenuOpen = true })
+                DropdownMenu(expanded = flagMenuOpen, onDismissRequest = { flagMenuOpen = false }, containerColor = WColor.surface) {
+                    flagMotifOptions.forEach { (motif, label, explanation) ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(text = label, style = WTypography.bodyMedium)
+                                    Text(text = explanation, style = WTypography.labelSmall.copy(color = WColor.muted))
+                                }
+                            },
+                            onClick = {
+                                onSetFlag(observation.id, motif)
+                                flagMenuOpen = false
+                            }
+                        )
+                    }
                 }
             }
+            InfoTip(text = "Tags this row for a data-quality reviewer -- e.g. \"this price looks wrong.\" Replaces its comment with the flag reason.")
         }
         SmallButton(text = "Delete", onClick = onDelete)
+    }
+}
+
+private val flagMotifOptions =
+    listOf(
+        Triple(FlagMotif.PARSING_ERROR, "Parsing error", "The capture misread this price"),
+        Triple(FlagMotif.OUTLIER, "Outlier", "Looks abnormally high or low"),
+        Triple(FlagMotif.DUPLICATE, "Duplicate", "Same listing captured twice"),
+        Triple(FlagMotif.MANUAL_CHECK, "Needs review", "Flag for manual verification")
+    )
+
+@Composable
+private fun LabeledField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    Column(modifier = Modifier.wrapContentWidth()) {
+        Text(text = label, style = WTypography.labelSmall.copy(color = WColor.muted))
+        SmallTextField(value = value, onValueChange = onValueChange, placeholder = label, modifier = Modifier.width(90.dp))
     }
 }
 
@@ -485,7 +724,7 @@ private fun CraftCostTab(
 @Composable
 private fun CraftCostResultCard(
     result: me.chosante.marketclient.CraftCostResponse,
-    itemInfo: Map<Int, Equipment>,
+    itemInfo: Map<Int, ItemInfoResponse>,
     lang: Lang,
     onRequestItemInfo: (Int) -> Unit,
 ) {
@@ -498,7 +737,7 @@ private fun CraftCostResultCard(
                 .border(1.dp, WColor.border, RoundedCornerShape(WDimens.radius))
                 .padding(16.dp)
     ) {
-        ItemBadge(itemId = result.itemId, equipment = itemInfo[result.itemId], lang = lang, onRequestItemInfo = onRequestItemInfo)
+        ItemBadge(itemId = result.itemId, item = itemInfo[result.itemId], lang = lang, onRequestItemInfo = onRequestItemInfo)
         Spacer(modifier = Modifier.height(10.dp))
         val decisionColor =
             when (result.decision) {
@@ -530,7 +769,7 @@ private fun CraftCostResultCard(
             ) {
                 ItemBadge(
                     itemId = ingredient.itemId,
-                    equipment = itemInfo[ingredient.itemId],
+                    item = itemInfo[ingredient.itemId],
                     lang = lang,
                     onRequestItemInfo = onRequestItemInfo,
                     modifier = Modifier.widthIn(min = 200.dp)
@@ -545,39 +784,51 @@ private fun CraftCostResultCard(
 }
 
 /**
- * An item's icon/rarity/localized-name/level, resolved lazily from [equipment] (looked up by
- * `itemId` in [UiState.itemInfoCache]) -- the same visual language the build optimizer's paperdoll
- * uses ([ItemThumbnail]/[RarityIcon]), so a price/ingredient row reads as "this specific item," not
- * a bare id. Falls back to a plain "#itemId" placeholder tile while the lookup is in flight or the
- * id is unknown to market-server's catalog.
+ * An item's icon/rarity/localized-name/level, resolved lazily from [item] (looked up by `itemId` in
+ * [UiState.itemInfoCache]) -- used where the item isn't already part of a search result (the Craft
+ * Cost tab, whose ingredients aren't a browse list). Falls back to a plain "#itemId" tile while the
+ * lookup is in flight or the id is genuinely outside the catalog (a category items-extractor
+ * doesn't cover yet).
  */
 @Composable
 private fun ItemBadge(
     itemId: Int,
-    equipment: Equipment?,
+    item: ItemInfoResponse?,
     lang: Lang,
     onRequestItemInfo: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(itemId) { onRequestItemInfo(itemId) }
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (equipment != null) {
-            ItemThumbnail(equipment = equipment, size = 32.dp)
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    RarityIcon(rarity = equipment.rarity, size = 12.dp)
-                    Text(
-                        text = equipment.name.localized(lang),
-                        style = WTypography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Text(text = "Lvl ${equipment.level} · #$itemId", style = WTypography.labelSmall.copy(color = WColor.muted))
-            }
-        } else {
+    if (item != null) {
+        ItemInfoBadge(item = item, lang = lang, modifier = modifier)
+    } else {
+        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WColor.bg))
-            Text(text = "#$itemId", style = WTypography.bodyMedium.copy(color = WColor.muted))
+            Text(text = "Unknown item · #$itemId", style = WTypography.bodyMedium.copy(color = WColor.muted))
+        }
+    }
+}
+
+/** Renders an already-resolved [ItemInfoResponse]: icon, rarity badge, localized name, and level. */
+@Composable
+private fun ItemInfoBadge(
+    item: ItemInfoResponse,
+    lang: Lang,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ItemThumbnail(iconKey = item.iconKey, size = 32.dp)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                RarityIcon(rarity = item.rarity, size = 12.dp)
+                Text(
+                    text = item.name.localized(lang),
+                    style = WTypography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(text = "Lvl ${item.level} · #${item.itemId}", style = WTypography.labelSmall.copy(color = WColor.muted))
         }
     }
 }

@@ -2,6 +2,8 @@ package me.chosante.marketclient
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import me.chosante.common.I18nText
+import me.chosante.common.Rarity
 
 @Serializable
 data class ObservationResponse(
@@ -84,6 +86,28 @@ data class CraftCostResponse(
     val missingPriceCount: Int,
     val decision: String,
     val ingredients: List<IngredientCost>,
+)
+
+// Mirrors market-server's own DTO exactly -- see its doc comment for why the shape is unified
+// across equipment and encyclopedia-sourced (resource/consumable) items.
+@Serializable
+data class ItemInfoResponse(
+    val itemId: Int,
+    val name: I18nText,
+    val level: Int,
+    val rarity: Rarity,
+    val iconKey: Int,
+    val category: String,
+    val isEquipment: Boolean,
+)
+
+@Serializable
+data class ItemSearchResult(
+    val item: ItemInfoResponse,
+    val latestMinPrice: Long? = null,
+    val latestAvgPrice: Long? = null,
+    val latestServer: String? = null,
+    val latestObservedAt: String? = null,
 )
 
 // phase: "idle" | "capturing" | "processing" | "error" -- mirrors market-server's own DTO exactly.

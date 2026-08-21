@@ -12,9 +12,9 @@ repositories {
     mavenCentral()
 }
 
-// Reuses autobuilder's committed equipments.json (and its sibling resource files, harmlessly)
-// without a project dependency on :autobuilder -- that would drag in OR-Tools' ~100 native
-// dylibs and Clikt just to read one JSON file. See EquipmentCatalog.kt.
+// Reuses autobuilder's committed equipments.json / resource-items.json (and their sibling resource
+// files, harmlessly) without a project dependency on :autobuilder -- that would drag in OR-Tools'
+// ~100 native dylibs and Clikt just to read a couple of JSON files. See ItemCatalog.kt.
 sourceSets {
     main {
         resources {

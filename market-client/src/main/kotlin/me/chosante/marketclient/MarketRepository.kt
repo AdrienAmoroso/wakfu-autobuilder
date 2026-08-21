@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import me.chosante.common.Equipment
+import me.chosante.common.Rarity
 
 private const val DEFAULT_BASE_URL = "http://localhost:8085"
 
@@ -115,24 +115,53 @@ class MarketRepository(
         }
 
     /**
-     * Item details (name/rarity/icon id/level/…) for enriching a bare `itemId` in the Market
-     * screen's Prices/Craft Cost tabs -- the same [Equipment] the build optimizer already renders
-     * via `ItemThumbnail`/`RarityIcon`, served by market-server's `/api/items/{id}` off its
-     * existing `EquipmentCatalog` (reusing `equipments.json`, no separate item database). Null on
-     * a 404 (unknown itemId) or any other failure -- this is best-effort enrichment, never on the
-     * critical path for prices/craft cost themselves.
+     * Item details (name/rarity/icon key/level/…) for enriching a bare `itemId` in the Market
+     * screen's Prices/Craft Cost tabs -- the same visual language the build optimizer renders via
+     * `ItemThumbnail`/`RarityIcon`, served by market-server's `/api/items/{id}` off its unified
+     * `ItemCatalog` (equipment + resources/consumables, no separate lookup per kind). Null on a 404
+     * (unknown itemId) or any other failure -- this is best-effort enrichment, never on the critical
+     * path for prices/craft cost themselves.
      */
-    suspend fun getItem(itemId: Int): Equipment? =
+    suspend fun getItem(itemId: Int): ItemInfoResponse? =
         withContext(ioDispatcher) {
             try {
                 val (_, _, result) =
                     "$baseUrl/api/items/$itemId"
                         .httpGet()
-                        .awaitObjectResponse(kotlinxDeserializerOf(loader = Equipment.serializer(), json = json))
+                        .awaitObjectResponse(kotlinxDeserializerOf(loader = ItemInfoResponse.serializer(), json = json))
                 result
             } catch (_: Exception) {
                 null
             }
+        }
+
+    /**
+     * HDV-style browse: search the item catalog by name/level range/rarity, each hit carrying its
+     * latest known price. Throws on failure like [listObservations] -- unlike [getItem]'s
+     * best-effort enrichment, this list IS the Prices tab's primary content, so the caller must be
+     * able to tell "no results" (empty list) apart from "couldn't reach market-server" (exception).
+     */
+    suspend fun searchItems(
+        name: String? = null,
+        minLevel: Int? = null,
+        maxLevel: Int? = null,
+        rarities: Set<Rarity> = emptySet(),
+        limit: Int? = null,
+    ): List<ItemSearchResult> =
+        withContext(ioDispatcher) {
+            val params =
+                buildList {
+                    name?.let { add("name" to it) }
+                    minLevel?.let { add("minLevel" to it) }
+                    maxLevel?.let { add("maxLevel" to it) }
+                    if (rarities.isNotEmpty()) add("rarity" to rarities.joinToString(",") { it.name })
+                    limit?.let { add("limit" to it) }
+                }
+            val (_, _, result) =
+                "$baseUrl/api/items/search"
+                    .httpGet(params)
+                    .awaitObjectResponse(kotlinxDeserializerOf(loader = ListSerializer(ItemSearchResult.serializer()), json = json))
+            result
         }
 
     suspend fun startCapture(): CaptureStatusResponse =

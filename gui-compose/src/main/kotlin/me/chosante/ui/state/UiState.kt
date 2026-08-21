@@ -18,6 +18,8 @@ import me.chosante.common.Rarity
 import me.chosante.common.history.HistoryEntry
 import me.chosante.marketclient.CaptureStatusResponse
 import me.chosante.marketclient.CraftCostResponse
+import me.chosante.marketclient.ItemInfoResponse
+import me.chosante.marketclient.ItemSearchResult
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.label
@@ -341,6 +343,21 @@ data class UiState(
     val libraryGroupByClass: Boolean = false,
     // --- Market (HDV price observations + craft cost) --- Active in-screen tab of [Screen.Market].
     val marketTab: MarketTab = MarketTab.PRICES,
+    /**
+     * HDV-style browse, mirroring the in-game auction house's own search: free-text name +
+     * level range + rarity filter over the full item catalog (equipment + resources/consumables),
+     * each hit carrying its latest known price. This is the Prices tab's primary view. All
+     * in-memory only (reset each launch), matching [marketItemIdFilter]'s existing precedent.
+     */
+    val marketSearchQuery: String = "",
+    val marketMinLevel: String = "",
+    val marketMaxLevel: String = "",
+    val marketRarityFilter: Set<Rarity> = emptySet(),
+    val marketSearchResults: List<ItemSearchResult> = emptyList(),
+    val marketSearchState: MarketState = MarketState.Idle,
+    /** The item currently expanded in [marketSearchResults], showing its full price-observation
+     * history (edit/flag/delete, add a manual entry) inline below it. Null = none expanded. */
+    val marketExpandedItemId: Int? = null,
     /** Optional itemId text filter for the observations list. In-memory only. */
     val marketItemIdFilter: String = "",
     /** Most recently loaded observations for [marketItemIdFilter] (or the latest N overall if blank). */
@@ -361,7 +378,7 @@ data class UiState(
      * optimizer uses, instead of a number. Populated lazily by [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded]
      * as each id is first shown; absent = not resolved (yet, or the id doesn't exist).
      */
-    val itemInfoCache: Map<Int, Equipment> = emptyMap(),
+    val itemInfoCache: Map<Int, ItemInfoResponse> = emptyMap(),
     /** itemIds already requested via [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded], so each id is fetched at most once per session. */
     val itemInfoRequested: Set<Int> = emptySet(),
 )

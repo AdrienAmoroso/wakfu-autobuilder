@@ -25,8 +25,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Classpath path of an item's icon, falling back to a placeholder when the asset is missing. */
-internal fun Equipment.itemResourcePath(): String {
-    val path = "assets/items/$guiId.png"
+internal fun Equipment.itemResourcePath(): String = itemResourcePathFor(guiId)
+
+/**
+ * Classpath path of an item's icon keyed directly by its icon id -- [Equipment.guiId] for gear,
+ * or [me.chosante.common.ItemSummary.iconKey] (the itemId itself) for encyclopedia-sourced
+ * resources/consumables, since both kinds' PNGs live in the same `assets/items/<key>.png`
+ * directory (see `ItemSummary`'s doc comment for why).
+ */
+internal fun itemResourcePathFor(iconKey: Int): String {
+    val path = "assets/items/$iconKey.png"
     val loader = Thread.currentThread().contextClassLoader
     return if (loader.getResource(path) != null) path else "assets/items/0000000.png"
 }
@@ -133,6 +141,14 @@ internal fun ItemThumbnail(
     equipment: Equipment,
     modifier: Modifier = Modifier,
     size: Dp = 34.dp,
+) = ItemThumbnail(iconKey = equipment.guiId, modifier = modifier, size = size)
+
+/** An item's icon thumbnail in a rounded tile, keyed directly by icon id -- see [itemResourcePathFor]. */
+@Composable
+internal fun ItemThumbnail(
+    iconKey: Int,
+    modifier: Modifier = Modifier,
+    size: Dp = 34.dp,
 ) {
     Box(
         modifier =
@@ -142,7 +158,7 @@ internal fun ItemThumbnail(
                 .background(WColor.bg),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        val bitmap = rememberClasspathBitmap(equipment.itemResourcePath())
+        val bitmap = rememberClasspathBitmap(itemResourcePathFor(iconKey))
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,

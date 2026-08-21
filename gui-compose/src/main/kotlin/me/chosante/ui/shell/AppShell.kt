@@ -155,8 +155,6 @@ fun AppShell(
                             MarketScreen(
                                 ui = ui,
                                 onSelectTab = model::setMarketTab,
-                                onItemIdFilterChange = model::setMarketItemIdFilter,
-                                onLoadObservations = model::loadMarketObservations,
                                 onCreateObservation = model::createMarketObservation,
                                 onDeleteObservation = model::deleteMarketObservation,
                                 onUpdatePrices = model::updateMarketPrices,
@@ -165,7 +163,12 @@ fun AppShell(
                                 onLookupCraftCost = model::lookupCraftCost,
                                 onStartCapture = model::startCapture,
                                 onStopCapture = model::stopCapture,
-                                onRequestItemInfo = model::ensureItemInfoLoaded
+                                onRequestItemInfo = model::ensureItemInfoLoaded,
+                                onSearchQueryChange = model::setMarketSearchQuery,
+                                onMinLevelChange = model::setMarketMinLevel,
+                                onMaxLevelChange = model::setMarketMaxLevel,
+                                onToggleRarityFilter = model::toggleMarketRarityFilter,
+                                onToggleExpandedItem = model::toggleExpandedMarketItem
                             )
                     }
                 }

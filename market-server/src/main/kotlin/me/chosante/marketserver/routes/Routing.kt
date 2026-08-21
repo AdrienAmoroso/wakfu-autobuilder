@@ -11,7 +11,7 @@ fun Application.configureRouting(
     captureService: CaptureService = CaptureService(),
 ) {
     routing {
-        itemRoutes()
+        itemRoutes(database)
         priceRoutes(database)
         craftRoutes(database)
         captureRoutes(dbPath, captureService)

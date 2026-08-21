@@ -119,6 +119,27 @@ object PriceObservationService {
             if (updated == 0) null else findById(id)
         }
 
+    /**
+     * Distinct itemIds with at least one observation, most-recently-observed first -- the Prices
+     * tab's default browse view when no name/level/rarity filter is set, so opening the Market
+     * screen shows "what I've actually captured" (like walking into the HDV and seeing what's
+     * listed) rather than an arbitrary slice of the full item catalog sorted by level.
+     */
+    fun recentlyObservedItemIds(
+        db: Database,
+        limit: Int,
+    ): List<Int> =
+        transaction(db) {
+            PriceObservations
+                .selectAll()
+                .orderBy(PriceObservations.id, SortOrder.DESC)
+                .asSequence()
+                .map { it[PriceObservations.itemId] }
+                .distinct()
+                .take(limit)
+                .toList()
+        }
+
     fun latestForItem(
         db: Database,
         itemId: Int,
@@ -136,6 +157,31 @@ object PriceObservationService {
                 .limit(1)
                 .map { it.toObservationResponse() }
                 .firstOrNull()
+        }
+
+    /**
+     * Batched [latestForItem]: one query for every id in [itemIds] instead of one query per id --
+     * used by `/api/items/search`, which would otherwise run up to `limit` (default 50, max 200)
+     * separate queries per search, on a path retriggered on every debounced keystroke.
+     */
+    fun latestForItems(
+        db: Database,
+        itemIds: Collection<Int>,
+    ): Map<Int, ObservationResponse> =
+        if (itemIds.isEmpty()) {
+            emptyMap()
+        } else {
+            transaction(db) {
+                PriceObservations
+                    .selectAll()
+                    .where { PriceObservations.itemId inList itemIds }
+                    .orderBy(PriceObservations.id, SortOrder.DESC)
+                    .asSequence()
+                    .map { it.toObservationResponse() }
+                    // Rows arrive most-recent-first, so the first occurrence per itemId is its latest.
+                    .distinctBy { it.itemId }
+                    .associateBy { it.itemId }
+            }
         }
 
     private fun findById(id: Int): ObservationResponse? =

@@ -181,6 +181,10 @@ class BuildSearchModel(
     // stopCapture(), restarted by refreshCaptureStatus() when the Market screen is (re)opened).
     private var captureJob: Job? = null
 
+    // Debounces the HDV-style item search (name/level/rarity edits) so typing doesn't fire one
+    // request per keystroke -- cancel-and-replace, same shape as captureJob.
+    private var marketSearchJob: Job? = null
+
     // B8: cancelling [proofJob] only stops the coroutine, not the blocking certifier DP running inside it (which
     // can hold a core for minutes). This flag — set at every proof-cancel site, polled once per certifier DP
     // stage — makes the DP bail promptly. AtomicBoolean because the parallel exact tier polls it off pool threads.
@@ -256,7 +260,7 @@ class BuildSearchModel(
             screenshotExcludedRarities()?.let { ui = ui.copy(excludedRarities = it) }
             if (screenshotMarketScreen) {
                 ui = ui.copy(screen = Screen.Market)
-                loadMarketObservations()
+                searchMarketItems()
             } else {
                 search()
             }
@@ -1291,6 +1295,73 @@ class BuildSearchModel(
         ui = ui.copy(marketItemIdFilter = value.onlyDigits())
     }
 
+    fun setMarketSearchQuery(value: String) {
+        ui = ui.copy(marketSearchQuery = value)
+        scheduleMarketSearch()
+    }
+
+    fun setMarketMinLevel(value: String) {
+        ui = ui.copy(marketMinLevel = value.onlyDigits())
+        scheduleMarketSearch()
+    }
+
+    fun setMarketMaxLevel(value: String) {
+        ui = ui.copy(marketMaxLevel = value.onlyDigits())
+        scheduleMarketSearch()
+    }
+
+    fun toggleMarketRarityFilter(rarity: Rarity) {
+        ui = ui.copy(marketRarityFilter = if (rarity in ui.marketRarityFilter) ui.marketRarityFilter - rarity else ui.marketRarityFilter + rarity)
+        scheduleMarketSearch()
+    }
+
+    /** Debounced (300ms) live search triggered by every filter edit above. */
+    private fun scheduleMarketSearch() {
+        marketSearchJob?.cancel()
+        marketSearchJob =
+            scope.launch(Dispatchers.Default) {
+                delay(300.milliseconds)
+                runMarketSearch()
+            }
+    }
+
+    /** Immediate search -- called once on entering the Market screen, see [goToScreen]. */
+    fun searchMarketItems() {
+        marketSearchJob?.cancel()
+        scope.launch(Dispatchers.Default) { runMarketSearch() }
+    }
+
+    private suspend fun runMarketSearch() {
+        withContext(mainDispatcher) { ui = ui.copy(marketSearchState = MarketState.Loading, error = null) }
+        try {
+            val results =
+                marketRepository.searchItems(
+                    name = ui.marketSearchQuery.trim().ifBlank { null },
+                    minLevel = ui.marketMinLevel.toIntOrNull(),
+                    maxLevel = ui.marketMaxLevel.toIntOrNull(),
+                    rarities = ui.marketRarityFilter
+                )
+            withContext(mainDispatcher) { ui = ui.copy(marketSearchResults = results, marketSearchState = MarketState.Ready) }
+        } catch (exception: Exception) {
+            withContext(mainDispatcher) {
+                ui = ui.copy(marketSearchState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+            }
+        }
+    }
+
+    /** Expands/collapses [itemId]'s full price-observation history under its row in the browse list. */
+    fun toggleExpandedMarketItem(itemId: Int) {
+        if (ui.marketExpandedItemId == itemId) {
+            ui = ui.copy(marketExpandedItemId = null)
+            return
+        }
+        // Clear the previous item's rows immediately -- otherwise, until the fetch below lands, they'd
+        // render under the *new* item's header (same ui.marketObservations backs every expanded card),
+        // and a Save/Delete click in that window would silently mutate the wrong item's data.
+        ui = ui.copy(marketExpandedItemId = itemId, marketItemIdFilter = itemId.toString(), marketObservations = emptyList())
+        loadMarketObservations()
+    }
+
     fun setCraftCostItemId(value: String) {
         ui = ui.copy(craftCostItemId = value.onlyDigits())
     }
@@ -1321,6 +1392,7 @@ class BuildSearchModel(
                 withContext(mainDispatcher) {
                     ui = ui.copy(marketObservations = observations, marketLoadState = MarketState.Ready, toast = "Observation created")
                 }
+                searchMarketItems()
             } catch (exception: Exception) {
                 withContext(mainDispatcher) {
                     ui = ui.copy(marketLoadState = MarketState.Error, error = exception.message ?: "Could not create observation")
@@ -1335,6 +1407,7 @@ class BuildSearchModel(
                 marketRepository.deleteObservation(id)
                 val observations = marketRepository.listObservations(itemId = ui.marketItemIdFilter.toIntOrNull())
                 withContext(mainDispatcher) { ui = ui.copy(marketObservations = observations) }
+                searchMarketItems()
             } catch (exception: Exception) {
                 withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not delete observation") }
             }
@@ -1353,6 +1426,7 @@ class BuildSearchModel(
                 withContext(mainDispatcher) {
                     ui = ui.copy(marketObservations = ui.marketObservations.map { if (it.id == id) updated else it })
                 }
+                searchMarketItems()
             } catch (exception: Exception) {
                 withContext(mainDispatcher) { ui = ui.copy(error = exception.message ?: "Could not update prices") }
             }
@@ -1542,6 +1616,9 @@ class BuildSearchModel(
         // not assume it's still whatever it was when we last left.
         if (screen == Screen.Market) {
             refreshCaptureStatus()
+            if (ui.marketSearchResults.isEmpty() && ui.marketSearchState == MarketState.Idle) {
+                searchMarketItems()
+            }
         }
     }
 
