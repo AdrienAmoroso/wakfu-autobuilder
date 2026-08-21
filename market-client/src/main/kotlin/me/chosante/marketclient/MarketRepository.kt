@@ -115,6 +115,77 @@ class MarketRepository(
         }
 
     /**
+     * The Kamas screen's Crafting tab: every recipe with enough captured price data to score,
+     * ranked by ROI best-first.
+     */
+    suspend fun craftOpportunities(
+        server: String? = null,
+        taxRate: Double? = null,
+        limit: Int? = null,
+    ): List<CraftCostResponse> =
+        withContext(ioDispatcher) {
+            val params =
+                buildList {
+                    server?.let { add("server" to it) }
+                    taxRate?.let { add("taxRate" to it) }
+                    limit?.let { add("limit" to it) }
+                }
+            val (_, _, result) =
+                "$baseUrl/api/crafts/opportunities"
+                    .httpGet(params)
+                    .awaitObjectResponse(kotlinxDeserializerOf(loader = ListSerializer(CraftCostResponse.serializer()), json = json))
+            result
+        }
+
+    /**
+     * The Kamas screen's Harvesting tab: every harvest node with enough captured drop-price data
+     * to score, ranked by expected kamas per harvest best-first.
+     */
+    suspend fun harvestOpportunities(
+        server: String? = null,
+        minSkillLevel: Int? = null,
+        limit: Int? = null,
+    ): List<HarvestOpportunity> =
+        withContext(ioDispatcher) {
+            val params =
+                buildList {
+                    server?.let { add("server" to it) }
+                    minSkillLevel?.let { add("minSkillLevel" to it) }
+                    limit?.let { add("limit" to it) }
+                }
+            val (_, _, result) =
+                "$baseUrl/api/harvest/opportunities"
+                    .httpGet(params)
+                    .awaitObjectResponse(kotlinxDeserializerOf(loader = ListSerializer(HarvestOpportunity.serializer()), json = json))
+            result
+        }
+
+    /**
+     * The Kamas screen's Monster Farming tab: every monster with a known drop table, ranked by
+     * expected kamas per kill best-first.
+     */
+    suspend fun monsterFarmingOpportunities(
+        server: String? = null,
+        minLevel: Int? = null,
+        maxLevel: Int? = null,
+        limit: Int? = null,
+    ): List<MonsterFarmingOpportunity> =
+        withContext(ioDispatcher) {
+            val params =
+                buildList {
+                    server?.let { add("server" to it) }
+                    minLevel?.let { add("minLevel" to it) }
+                    maxLevel?.let { add("maxLevel" to it) }
+                    limit?.let { add("limit" to it) }
+                }
+            val (_, _, result) =
+                "$baseUrl/api/monster-drops/opportunities"
+                    .httpGet(params)
+                    .awaitObjectResponse(kotlinxDeserializerOf(loader = ListSerializer(MonsterFarmingOpportunity.serializer()), json = json))
+            result
+        }
+
+    /**
      * Item details (name/rarity/icon key/level/…) for enriching a bare `itemId` in the Market
      * screen's Prices/Craft Cost tabs -- the same visual language the build optimizer renders via
      * `ItemThumbnail`/`RarityIcon`, served by market-server's `/api/items/{id}` off its unified

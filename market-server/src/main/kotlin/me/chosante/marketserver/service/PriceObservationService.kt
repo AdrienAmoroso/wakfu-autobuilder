@@ -167,14 +167,19 @@ object PriceObservationService {
     fun latestForItems(
         db: Database,
         itemIds: Collection<Int>,
+        server: String? = null,
     ): Map<Int, ObservationResponse> =
         if (itemIds.isEmpty()) {
             emptyMap()
         } else {
             transaction(db) {
-                PriceObservations
-                    .selectAll()
-                    .where { PriceObservations.itemId inList itemIds }
+                val query =
+                    if (server != null) {
+                        PriceObservations.selectAll().where { (PriceObservations.itemId inList itemIds) and (PriceObservations.server eq server) }
+                    } else {
+                        PriceObservations.selectAll().where { PriceObservations.itemId inList itemIds }
+                    }
+                query
                     .orderBy(PriceObservations.id, SortOrder.DESC)
                     .asSequence()
                     .map { it.toObservationResponse() }

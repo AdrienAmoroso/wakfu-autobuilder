@@ -14,6 +14,8 @@ fun Application.configureRouting(
         itemRoutes(database)
         priceRoutes(database)
         craftRoutes(database)
+        harvestRoutes(database)
+        monsterFarmingRoutes(database)
         captureRoutes(dbPath, captureService)
     }
 }

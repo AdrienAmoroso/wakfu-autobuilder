@@ -169,6 +169,7 @@ tasks.register("generateAssets") {
 
         It converts these sets into src/main/resources/assets (TGA -> PNG):
           - items/     filtered to the guiIds referenced by the current equipments JSON (also covers rune items)
+                       and the iconKeys referenced by harvest-nodes.json (harvest-extractor)
           - spells/    filtered to the iconIds/gfxIds referenced by the current spells + passives JSON
           - states/    filtered to the appliedStateIds referenced by the passives JSON (buff/state icons)
           - breeds/    class artwork keyed by CharacterClass.breedId — icon/, illustration/ (male), background/
@@ -197,6 +198,18 @@ tasks.register("generateAssets") {
                 ?.let {
                     val items = groovy.json.JsonSlurper().parseText(it.readText()) as List<Map<String, Any>>
                     items.map { item -> (item["guiId"] as Int).toString() }.toSet()
+                } ?: emptySet()
+
+        // iconKeys referenced by harvest-nodes.json (harvest-extractor) -- same icons/items/64 gui.jar
+        // set equipment guiIds come from, confirmed directly against the jar (see that module).
+        @Suppress("UNCHECKED_CAST")
+        val iconKeysFromHarvestNodesJson =
+            rootProject.projectDir
+                .resolve("autobuilder/src/main/resources/harvest-nodes.json")
+                .takeIf { it.isFile }
+                ?.let {
+                    val nodes = groovy.json.JsonSlurper().parseText(it.readText()) as List<Map<String, Any>>
+                    nodes.map { node -> (node["iconKey"] as Int).toString() }.toSet()
                 } ?: emptySet()
 
         // spell icon gfxIds + passive-applied state ids referenced by the current spell datasets.
@@ -250,7 +263,7 @@ tasks.register("generateAssets") {
                 logger.lifecycle("generateAssets: $category -> $copied file(s) from gui.jar")
             }
 
-            extract("items", "icons/items/64", guiIdsFromCurrentEquipmentJson) // also covers runes (item shards)
+            extract("items", "icons/items/64", guiIdsFromCurrentEquipmentJson + iconKeysFromHarvestNodesJson) // also covers runes (item shards)
             extract("spells", "icons/spells/64", spellIconIds + passiveGfxIds)
             extract("states", "icons/states", passiveStateIds)
 

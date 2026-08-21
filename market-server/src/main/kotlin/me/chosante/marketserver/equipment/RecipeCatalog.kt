@@ -19,4 +19,6 @@ object RecipeCatalog {
     }
 
     fun findByItemId(id: Int): Recipe? = byItemId[id]
+
+    fun all(): List<Recipe> = byItemId.values.toList()
 }

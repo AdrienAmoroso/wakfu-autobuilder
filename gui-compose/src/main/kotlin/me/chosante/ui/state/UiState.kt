@@ -18,8 +18,10 @@ import me.chosante.common.Rarity
 import me.chosante.common.history.HistoryEntry
 import me.chosante.marketclient.CaptureStatusResponse
 import me.chosante.marketclient.CraftCostResponse
+import me.chosante.marketclient.HarvestOpportunity
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.ItemSearchResult
+import me.chosante.marketclient.MonsterFarmingOpportunity
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.label
@@ -108,12 +110,20 @@ enum class Screen {
     Library,
     Compare,
     Market,
+    Kamas,
 }
 
 /** In-screen tabs of [Screen.Market]: the price-observation table, or the craft-cost lookup. */
 enum class MarketTab {
     PRICES,
     CRAFT_COST,
+}
+
+/** In-screen tabs of [Screen.Kamas]: the three profitable-activity rankings it surfaces. */
+enum class KamasTab {
+    CRAFTING,
+    HARVESTING,
+    MONSTER_FARMING,
 }
 
 /**
@@ -381,6 +391,17 @@ data class UiState(
     val itemInfoCache: Map<Int, ItemInfoResponse> = emptyMap(),
     /** itemIds already requested via [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded], so each id is fetched at most once per session. */
     val itemInfoRequested: Set<Int> = emptySet(),
+    // --- Kamas (money-making opportunity finder) --- Active in-screen tab of [Screen.Kamas].
+    val kamasTab: KamasTab = KamasTab.CRAFTING,
+    /** Every recipe with enough captured price data to score, ranked by ROI -- see `CraftCostService.scanAll`. */
+    val craftOpportunities: List<CraftCostResponse> = emptyList(),
+    val craftOpportunitiesState: MarketState = MarketState.Idle,
+    /** Every harvest node with enough captured drop-price data, ranked by expected kamas per harvest. */
+    val harvestOpportunities: List<HarvestOpportunity> = emptyList(),
+    val harvestOpportunitiesState: MarketState = MarketState.Idle,
+    /** Every monster with a known drop table and enough captured price data, ranked by expected kamas per kill. */
+    val monsterFarmingOpportunities: List<MonsterFarmingOpportunity> = emptyList(),
+    val monsterFarmingOpportunitiesState: MarketState = MarketState.Idle,
 )
 
 /**

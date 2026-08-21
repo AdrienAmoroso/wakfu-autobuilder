@@ -228,6 +228,16 @@ class BuildSearchModel(
         System.getProperty("wakfu.compose.screenshot.market") != null ||
             System.getenv("WAKFU_COMPOSE_SCREENSHOT_MARKET") != null
 
+    /** Screenshot-only: land on the Kamas screen instead of running a search. */
+    private val screenshotKamasScreen =
+        System.getProperty("wakfu.compose.screenshot.kamas") != null ||
+            System.getenv("WAKFU_COMPOSE_SCREENSHOT_KAMAS") != null
+
+    /** Screenshot-only: which Kamas tab to land on ("harvesting"/"monster_farming"; default crafting). */
+    private val screenshotKamasTab =
+        (System.getProperty("wakfu.compose.screenshot.kamas.tab") ?: System.getenv("WAKFU_COMPOSE_SCREENSHOT_KAMAS_TAB"))
+            ?.lowercase()
+
     init {
         // Seed the persisted UI options (language + library view) + tag registry before any UI reads them.
         tagRegistry = libraryPreferences.loadTags()
@@ -261,6 +271,15 @@ class BuildSearchModel(
             if (screenshotMarketScreen) {
                 ui = ui.copy(screen = Screen.Market)
                 searchMarketItems()
+            } else if (screenshotKamasScreen) {
+                val tab =
+                    when (screenshotKamasTab) {
+                        "harvesting" -> KamasTab.HARVESTING
+                        "monster_farming" -> KamasTab.MONSTER_FARMING
+                        else -> KamasTab.CRAFTING
+                    }
+                ui = ui.copy(screen = Screen.Kamas, kamasTab = tab)
+                ensureKamasTabLoaded(tab)
             } else {
                 search()
             }
@@ -1466,6 +1485,74 @@ class BuildSearchModel(
         }
     }
 
+    // --- Kamas (money-making opportunity finder) ---
+
+    fun setKamasTab(tab: KamasTab) {
+        ui = ui.copy(kamasTab = tab)
+        ensureKamasTabLoaded(tab)
+    }
+
+    /** Fetches [tab]'s ranking on first display only -- called on tab switch and on entering the Kamas screen. */
+    private fun ensureKamasTabLoaded(tab: KamasTab) {
+        when (tab) {
+            KamasTab.CRAFTING -> if (ui.craftOpportunities.isEmpty() && ui.craftOpportunitiesState == MarketState.Idle) scanCraftOpportunities()
+            KamasTab.HARVESTING -> if (ui.harvestOpportunities.isEmpty() && ui.harvestOpportunitiesState == MarketState.Idle) scanHarvestOpportunities()
+            KamasTab.MONSTER_FARMING ->
+                if (ui.monsterFarmingOpportunities.isEmpty() && ui.monsterFarmingOpportunitiesState == MarketState.Idle) scanMonsterFarmingOpportunities()
+        }
+    }
+
+    /** Scans every recipe with enough captured price data, ranked by ROI -- the Kamas screen's Crafting tab. */
+    fun scanCraftOpportunities() {
+        ui = ui.copy(craftOpportunitiesState = MarketState.Loading, error = null)
+        scope.launch(Dispatchers.Default) {
+            try {
+                val results = marketRepository.craftOpportunities()
+                withContext(mainDispatcher) {
+                    ui = ui.copy(craftOpportunities = results, craftOpportunitiesState = MarketState.Ready)
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(craftOpportunitiesState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+                }
+            }
+        }
+    }
+
+    /** Scans every harvest node with enough captured drop-price data, ranked by expected kamas per harvest. */
+    fun scanHarvestOpportunities() {
+        ui = ui.copy(harvestOpportunitiesState = MarketState.Loading, error = null)
+        scope.launch(Dispatchers.Default) {
+            try {
+                val results = marketRepository.harvestOpportunities()
+                withContext(mainDispatcher) {
+                    ui = ui.copy(harvestOpportunities = results, harvestOpportunitiesState = MarketState.Ready)
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(harvestOpportunitiesState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+                }
+            }
+        }
+    }
+
+    /** Scans every monster with a known drop table, ranked by expected kamas per kill. */
+    fun scanMonsterFarmingOpportunities() {
+        ui = ui.copy(monsterFarmingOpportunitiesState = MarketState.Loading, error = null)
+        scope.launch(Dispatchers.Default) {
+            try {
+                val results = marketRepository.monsterFarmingOpportunities()
+                withContext(mainDispatcher) {
+                    ui = ui.copy(monsterFarmingOpportunities = results, monsterFarmingOpportunitiesState = MarketState.Ready)
+                }
+            } catch (exception: Exception) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(monsterFarmingOpportunitiesState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+                }
+            }
+        }
+    }
+
     /**
      * Resolves [itemId] into the rich [me.chosante.common.Equipment] display shown next to prices/
      * ingredients (icon, rarity, localized name, level) via `GET /api/items/{id}`, caching the
@@ -1619,6 +1706,9 @@ class BuildSearchModel(
             if (ui.marketSearchResults.isEmpty() && ui.marketSearchState == MarketState.Idle) {
                 searchMarketItems()
             }
+        }
+        if (screen == Screen.Kamas) {
+            ensureKamasTabLoaded(ui.kamasTab)
         }
     }
 

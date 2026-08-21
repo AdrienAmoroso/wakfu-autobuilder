@@ -19,12 +19,10 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,9 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.chosante.common.Rarity
 import me.chosante.marketclient.CaptureStatusResponse
@@ -45,9 +41,14 @@ import me.chosante.marketclient.ItemSearchResult
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.components.Hairline
 import me.chosante.ui.components.InfoTip
-import me.chosante.ui.components.ItemThumbnail
+import me.chosante.ui.components.ItemBadge
+import me.chosante.ui.components.ItemInfoBadge
+import me.chosante.ui.components.MessageCard
 import me.chosante.ui.components.RarityIcon
-import me.chosante.ui.components.localized
+import me.chosante.ui.components.SmallButton
+import me.chosante.ui.components.SmallTextField
+import me.chosante.ui.components.StatLine
+import me.chosante.ui.components.TabButton
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.label
 import me.chosante.ui.state.MarketState
@@ -133,79 +134,11 @@ private fun MarketTabHeader(
                         .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                MarketTabButton(label = "Prices", selected = current == MarketTab.PRICES) { onSelect(MarketTab.PRICES) }
-                MarketTabButton(label = "Craft Cost", selected = current == MarketTab.CRAFT_COST) { onSelect(MarketTab.CRAFT_COST) }
+                TabButton(label = "Prices", selected = current == MarketTab.PRICES) { onSelect(MarketTab.PRICES) }
+                TabButton(label = "Craft Cost", selected = current == MarketTab.CRAFT_COST) { onSelect(MarketTab.CRAFT_COST) }
             }
         }
         Hairline()
-    }
-}
-
-@Composable
-private fun MarketTabButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (selected) WColor.raised else WColor.bg)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(text = label, style = WTypography.labelMedium.copy(color = if (selected) WColor.text else WColor.muted))
-    }
-}
-
-@Composable
-private fun SmallButton(
-    text: String,
-    onClick: () -> Unit,
-    filled: Boolean = false,
-) {
-    Box(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (filled) WColor.accent else WColor.raised)
-                .border(1.dp, if (filled) WColor.accent else WColor.border, RoundedCornerShape(8.dp))
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Text(text = text, style = WTypography.labelMedium.copy(color = if (filled) WColor.bg else WColor.text))
-    }
-}
-
-@Composable
-private fun SmallTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier =
-            modifier
-                .height(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(WColor.surface)
-                .border(1.dp, WColor.border, RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            cursorBrush = SolidColor(WColor.accent),
-            textStyle = WTypography.bodyMedium.copy(color = WColor.text),
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (value.isEmpty()) {
-            Text(text = placeholder, style = WTypography.bodyMedium.copy(color = WColor.faint))
-        }
     }
 }
 
@@ -262,13 +195,13 @@ private fun PricesTab(
                 }
 
             ui.marketSearchState == MarketState.Error ->
-                MarketMessageCard(
+                MessageCard(
                     title = "Can't reach market-server",
                     hint = ui.error ?: "Start it with ./gradlew :market-server:run"
                 )
 
             ui.marketSearchState == MarketState.Ready ->
-                MarketMessageCard(title = "No items match", hint = "Try a broader name, level range, or fewer rarity filters.")
+                MessageCard(title = "No items match", hint = "Try a broader name, level range, or fewer rarity filters.")
         }
     }
 }
@@ -391,27 +324,6 @@ private fun observedAgoLabel(observedAt: String): String {
         minutes < 60 -> "${minutes}m ago"
         minutes < 60 * 24 -> "${minutes / 60}h ago"
         else -> "${minutes / (60 * 24)}d ago"
-    }
-}
-
-@Composable
-private fun MarketMessageCard(
-    title: String,
-    hint: String,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(WDimens.radius))
-                .background(WColor.surface)
-                .border(1.dp, WColor.hairline, RoundedCornerShape(WDimens.radius))
-                .padding(vertical = 28.dp, horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = title, style = WTypography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(text = hint, style = WTypography.bodySmall.copy(color = WColor.muted))
     }
 }
 
@@ -706,7 +618,7 @@ private fun CraftCostTab(
         Spacer(modifier = Modifier.height(14.dp))
         when {
             ui.craftCostState == MarketState.Error ->
-                MarketMessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
+                MessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
 
             ui.craftCostResult != null ->
                 CraftCostResultCard(
@@ -716,7 +628,7 @@ private fun CraftCostTab(
                     onRequestItemInfo = onRequestItemInfo
                 )
 
-            else -> MarketMessageCard(title = "No lookup yet", hint = "Enter a craftable item's id and hit Lookup.")
+            else -> MessageCard(title = "No lookup yet", hint = "Enter a craftable item's id and hit Lookup.")
         }
     }
 }
@@ -780,66 +692,5 @@ private fun CraftCostResultCard(
                 )
             }
         }
-    }
-}
-
-/**
- * An item's icon/rarity/localized-name/level, resolved lazily from [item] (looked up by `itemId` in
- * [UiState.itemInfoCache]) -- used where the item isn't already part of a search result (the Craft
- * Cost tab, whose ingredients aren't a browse list). Falls back to a plain "#itemId" tile while the
- * lookup is in flight or the id is genuinely outside the catalog (a category items-extractor
- * doesn't cover yet).
- */
-@Composable
-private fun ItemBadge(
-    itemId: Int,
-    item: ItemInfoResponse?,
-    lang: Lang,
-    onRequestItemInfo: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LaunchedEffect(itemId) { onRequestItemInfo(itemId) }
-    if (item != null) {
-        ItemInfoBadge(item = item, lang = lang, modifier = modifier)
-    } else {
-        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WColor.bg))
-            Text(text = "Unknown item · #$itemId", style = WTypography.bodyMedium.copy(color = WColor.muted))
-        }
-    }
-}
-
-/** Renders an already-resolved [ItemInfoResponse]: icon, rarity badge, localized name, and level. */
-@Composable
-private fun ItemInfoBadge(
-    item: ItemInfoResponse,
-    lang: Lang,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ItemThumbnail(iconKey = item.iconKey, size = 32.dp)
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                RarityIcon(rarity = item.rarity, size = 12.dp)
-                Text(
-                    text = item.name.localized(lang),
-                    style = WTypography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Text(text = "Lvl ${item.level} · #${item.itemId}", style = WTypography.labelSmall.copy(color = WColor.muted))
-        }
-    }
-}
-
-@Composable
-private fun StatLine(
-    label: String,
-    value: String,
-) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, style = WTypography.bodyMedium.copy(color = WColor.muted))
-        Text(text = value, style = WTypography.bodyMedium)
     }
 }

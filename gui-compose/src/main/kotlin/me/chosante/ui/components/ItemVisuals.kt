@@ -2,17 +2,24 @@ package me.chosante.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.chosante.common.Equipment
 import me.chosante.common.Rarity
+import me.chosante.marketclient.ItemInfoResponse
+import me.chosante.ui.i18n.Lang
 import me.chosante.ui.theme.WColor
+import me.chosante.ui.theme.WTypography
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -189,5 +199,55 @@ fun PassiveIcon(
             contentScale = ContentScale.Fit,
             modifier = modifier.size(size).clip(RoundedCornerShape(5.dp))
         )
+    }
+}
+
+/**
+ * An item's icon/rarity/localized-name/level, resolved lazily from [item] (looked up by `itemId` in
+ * `UiState.itemInfoCache`) -- shared by the Market screen's Craft Cost tab and the Kamas screen's
+ * opportunity lists, wherever an item isn't already part of a richer row that resolved it another
+ * way. Falls back to a plain "#itemId" tile while the lookup is in flight or the id is genuinely
+ * outside the catalog (a category items-extractor doesn't cover yet).
+ */
+@Composable
+internal fun ItemBadge(
+    itemId: Int,
+    item: ItemInfoResponse?,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LaunchedEffect(itemId) { onRequestItemInfo(itemId) }
+    if (item != null) {
+        ItemInfoBadge(item = item, lang = lang, modifier = modifier)
+    } else {
+        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WColor.bg))
+            Text(text = "Unknown item · #$itemId", style = WTypography.bodyMedium.copy(color = WColor.muted))
+        }
+    }
+}
+
+/** Renders an already-resolved [ItemInfoResponse]: icon, rarity badge, localized name, and level. */
+@Composable
+internal fun ItemInfoBadge(
+    item: ItemInfoResponse,
+    lang: Lang,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ItemThumbnail(iconKey = item.iconKey, size = 32.dp)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                RarityIcon(rarity = item.rarity, size = 12.dp)
+                Text(
+                    text = item.name.localized(lang),
+                    style = WTypography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(text = "Lvl ${item.level} · #${item.itemId}", style = WTypography.labelSmall.copy(color = WColor.muted))
+        }
     }
 }

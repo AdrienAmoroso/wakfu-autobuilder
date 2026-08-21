@@ -2,7 +2,9 @@ package me.chosante.marketclient
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import me.chosante.common.HarvestNode
 import me.chosante.common.I18nText
+import me.chosante.common.Monster
 import me.chosante.common.Rarity
 
 @Serializable
@@ -108,6 +110,25 @@ data class ItemSearchResult(
     val latestAvgPrice: Long? = null,
     val latestServer: String? = null,
     val latestObservedAt: String? = null,
+)
+
+// Mirrors market-server's own DTO exactly -- the Kamas screen's Harvesting tab.
+// missingDropCount > 0 means expectedValue, even when non-null, is a partial sum -- some drops had
+// no captured price and were excluded rather than silently counted as worthless.
+@Serializable
+data class HarvestOpportunity(
+    val node: HarvestNode,
+    val expectedValue: Long? = null,
+    val missingDropCount: Int = 0,
+)
+
+// Mirrors market-server's own DTO exactly -- the Kamas screen's Monster Farming tab. See
+// HarvestOpportunity's doc comment for missingDropCount.
+@Serializable
+data class MonsterFarmingOpportunity(
+    val monster: Monster,
+    val expectedValue: Long? = null,
+    val missingDropCount: Int = 0,
 )
 
 // phase: "idle" | "capturing" | "processing" | "error" -- mirrors market-server's own DTO exactly.

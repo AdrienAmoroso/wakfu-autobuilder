@@ -42,6 +42,7 @@ import me.chosante.ui.history.LibraryScreen
 import me.chosante.ui.i18n.LocalLang
 import me.chosante.ui.i18n.Tr
 import me.chosante.ui.i18n.tr
+import me.chosante.ui.kamas.KamasScreen
 import me.chosante.ui.market.MarketScreen
 import me.chosante.ui.paperdoll.PaperdollPanel
 import me.chosante.ui.request.RequestPanel
@@ -169,6 +170,13 @@ fun AppShell(
                                 onMaxLevelChange = model::setMarketMaxLevel,
                                 onToggleRarityFilter = model::toggleMarketRarityFilter,
                                 onToggleExpandedItem = model::toggleExpandedMarketItem
+                            )
+
+                        Screen.Kamas ->
+                            KamasScreen(
+                                ui = ui,
+                                onSelectTab = model::setKamasTab,
+                                onRequestItemInfo = model::ensureItemInfoLoaded
                             )
                     }
                 }

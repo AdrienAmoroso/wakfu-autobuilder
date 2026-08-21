@@ -1,7 +1,9 @@
 package me.chosante.marketserver.service
 
+import me.chosante.common.Recipe
 import me.chosante.marketserver.dto.CraftCostResponse
 import me.chosante.marketserver.dto.IngredientCost
+import me.chosante.marketserver.dto.ObservationResponse
 import me.chosante.marketserver.equipment.RecipeCatalog
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -19,11 +21,47 @@ object CraftCostService {
         taxRate: Double?,
     ): CraftCostResponse? {
         val recipe = RecipeCatalog.findByItemId(itemId) ?: return null
-        val effectiveTaxRate = taxRate ?: DEFAULT_TAX_RATE
+        val neededIds = recipe.ingredients.map { it.itemId }.toSet() + itemId
+        val prices = PriceObservationService.latestForItems(db, neededIds, server)
+        return scoreRecipe(recipe, prices, taxRate ?: DEFAULT_TAX_RATE)
+    }
 
+    /**
+     * Scans every known recipe and ranks the ones with enough price data to score, best ROI
+     * first -- the Kamas screen's "Crafting" tab. One batched price lookup for every ingredient +
+     * result id across ALL recipes (not one lookup per recipe per ingredient, which would be
+     * thousands of individual queries across ~5600 recipes).
+     */
+    fun scanAll(
+        db: Database,
+        server: String?,
+        taxRate: Double?,
+        limit: Int,
+    ): List<CraftCostResponse> {
+        val recipes = RecipeCatalog.all()
+        val neededIds =
+            recipes
+                .flatMapTo(mutableSetOf()) { it.ingredients.map { ingredient -> ingredient.itemId } }
+                .apply { addAll(recipes.map { it.itemId }) }
+        val prices = PriceObservationService.latestForItems(db, neededIds, server)
+        val effectiveTaxRate = taxRate ?: DEFAULT_TAX_RATE
+        return recipes
+            .asSequence()
+            .map { scoreRecipe(it, prices, effectiveTaxRate) }
+            .filter { it.decision != "insufficient_data" }
+            .sortedByDescending { it.roi }
+            .take(limit)
+            .toList()
+    }
+
+    private fun scoreRecipe(
+        recipe: Recipe,
+        prices: Map<Int, ObservationResponse>,
+        taxRate: Double,
+    ): CraftCostResponse {
         val perIngredient =
             recipe.ingredients.map { ingredient ->
-                val observation = PriceObservationService.latestForItem(db, ingredient.itemId, server)
+                val observation = prices[ingredient.itemId]
                 val unitPrice = observation?.minPrice
                 val cost =
                     IngredientCost(
@@ -38,10 +76,9 @@ object CraftCostService {
         val missingPriceCount = ingredientCosts.count { it.unitPrice == null }
         val craftCost = ingredientCosts.sumOf { it.subtotal ?: 0L }
 
-        val marketObservation = PriceObservationService.latestForItem(db, itemId, server)
-        val marketPrice = marketObservation?.minPrice
+        val marketPrice = prices[recipe.itemId]?.minPrice
         val grossMargin = marketPrice?.let { it - craftCost }
-        val netMargin = grossMargin?.let { (it * (1 - effectiveTaxRate)).toLong() }
+        val netMargin = grossMargin?.let { (it * (1 - taxRate)).toLong() }
         val roi = netMargin?.takeIf { craftCost > 0 }?.let { it.toDouble() / craftCost }
 
         val availableConfidences = perIngredient.mapNotNull { it.second }
@@ -58,7 +95,7 @@ object CraftCostService {
             }
 
         return CraftCostResponse(
-            itemId = itemId,
+            itemId = recipe.itemId,
             craftCost = craftCost,
             marketPrice = marketPrice,
             grossMargin = grossMargin,

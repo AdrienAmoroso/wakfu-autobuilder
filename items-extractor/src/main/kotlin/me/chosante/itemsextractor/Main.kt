@@ -38,14 +38,15 @@ private val rarityIndexToRarity =
     )
 
 /**
- * Builds `autobuilder/src/main/resources/resource-items.json` by crawling Ankama's public
- * encyclopedia for the item categories [ItemSummary] exists to cover -- resources and consumables,
- * which trade on the HDV but have no CDN gamedata feed the way equipment does (see `ItemSummary`'s
- * doc comment and this module's own research trail for why). Also downloads each item's hosted icon
- * straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`, the same directory (and
- * lookup convention) equipment icons already live in.
+ * Builds two files by crawling Ankama's public encyclopedia (no CDN gamedata feed covers either):
+ * - `autobuilder/src/main/resources/resource-items.json`: the item categories [ItemSummary] exists
+ *   to cover -- resources and consumables, which trade on the HDV but have no equipment-style CDN
+ *   feed (see `ItemSummary`'s doc comment and this module's research trail for why). Also downloads
+ *   each item's hosted icon straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`.
+ * - `autobuilder/src/main/resources/monster-drops.json`: every listed monster's drop table -- see
+ *   `MonsterDropCrawler.kt`.
  *
- * Resumable: listing pages are cached under `items-extractor/.cache/`.
+ * Resumable: every fetched page is cached under `items-extractor/.cache/`.
  *
  * Run with: `./gradlew :items-extractor:run`.
  */
@@ -133,4 +134,7 @@ suspend fun main() {
 
     println("\nWrote ${allItems.size} items -> ${outputFile.name}")
     println("Icons: $iconsDownloaded downloaded/already-present, $iconsFailed failed")
+
+    println("\nCrawling the bestiary for drop tables…")
+    crawlMonsterDrops(client, repoRoot)
 }

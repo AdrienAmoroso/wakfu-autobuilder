@@ -22,4 +22,14 @@ fun Route.craftRoutes(database: Database) {
             call.respond(result)
         }
     }
+
+    // The Kamas screen's Crafting tab: every recipe with enough captured price data to score,
+    // ranked by ROI -- "what's worth crafting and reselling right now."
+    get("/api/crafts/opportunities") {
+        val server = call.request.queryParameters["server"]
+        val taxRate = call.request.queryParameters["taxRate"]?.toDoubleOrNull()
+        val limit = call.request.queryParameters.resolveScanLimit()
+
+        call.respond(CraftCostService.scanAll(database, server, taxRate, limit))
+    }
 }

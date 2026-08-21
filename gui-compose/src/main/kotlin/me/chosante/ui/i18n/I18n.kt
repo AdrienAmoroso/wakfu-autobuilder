@@ -361,6 +361,7 @@ enum class Tr(
     NAV_BUILDER("Builder", "Builder"),
     NAV_LIBRARY("My Builds", "Mes builds"),
     NAV_MARKET("Market", "Marché"),
+    NAV_KAMAS("Kamas", "Kamas"),
     NEW_BUILD("＋ New", "＋ Nouveau"),
     ACTIVE_BUILD_EDITING("Editing", "Édition"),
     BACK("Back", "Retour"),

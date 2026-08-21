@@ -8,6 +8,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import me.chosante.marketserver.dto.CraftCostResponse
 import me.chosante.marketserver.module
@@ -84,5 +85,45 @@ class CraftRoutesTest {
             assertThat(result.marketPrice).isEqualTo(100000)
             assertThat(result.grossMargin).isEqualTo(100000 - expectedCraftCost)
             assertThat(result.decision).isIn("craft", "buy")
+        }
+
+    @Test
+    fun `opportunities scan returns nothing when no prices have been captured`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            val response = client.get("/api/crafts/opportunities")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val results = json.decodeFromString(ListSerializer(CraftCostResponse.serializer()), response.bodyAsText())
+            assertThat(results).isEmpty()
+        }
+
+    @Test
+    fun `opportunities scan surfaces a fully priced recipe, excluding insufficient_data ones`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            for (ingredientId in INGREDIENT_IDS) {
+                client.post("/api/prices/observations") {
+                    contentType(ContentType.Application.Json)
+                    setBody(observationBody(ingredientId, minPrice = 100))
+                }
+            }
+            client.post("/api/prices/observations") {
+                contentType(ContentType.Application.Json)
+                setBody(observationBody(CRAFTED_ITEM_ID, minPrice = 100000))
+            }
+
+            val response = client.get("/api/crafts/opportunities")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val results = json.decodeFromString(ListSerializer(CraftCostResponse.serializer()), response.bodyAsText())
+            assertThat(results).extracting<Int> { it.itemId }.contains(CRAFTED_ITEM_ID)
+            assertThat(results).allMatch { it.decision != "insufficient_data" }
+            val scanned = results.first { it.itemId == CRAFTED_ITEM_ID }
+            val expectedCraftCost = INGREDIENT_QUANTITIES.values.sumOf { it * 100L }
+            assertThat(scanned.craftCost).isEqualTo(expectedCraftCost)
+            assertThat(scanned.marketPrice).isEqualTo(100000)
         }
 }
