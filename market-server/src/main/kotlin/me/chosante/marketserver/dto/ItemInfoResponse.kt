@@ -26,6 +26,10 @@ data class ItemInfoResponse(
     val characteristics: Map<Characteristic, Int> = emptyMap(),
     val itemType: ItemType? = null,
     val maxShardSlots: Int? = null,
+    /** Flavor text from the encyclopedia's per-item detail page (`items-extractor`). Null for
+     * sources that don't crawl detail pages (equipment, sublimations, harvest materials) or when
+     * the item genuinely has none. */
+    val description: I18nText? = null,
 )
 
 /**

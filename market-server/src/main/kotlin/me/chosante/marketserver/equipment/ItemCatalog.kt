@@ -6,7 +6,6 @@ import me.chosante.common.ItemSummary
 import me.chosante.common.ItemType
 import me.chosante.common.Rarity
 import me.chosante.common.Sublimation
-import me.chosante.common.SublimationRarity
 import me.chosante.marketserver.dto.ItemInfoResponse
 
 // equipments.json / resource-items.json reach this module's classpath via the extra
@@ -60,6 +59,18 @@ object ItemCatalog {
         }
     }
 
+    // Raw harvestable materials (ores, wood, fish, fruit…) -- see HarvestExtractor.extractHarvestMaterials
+    // for how these are joined from CDN data harvest-extractor already fetches, not scraped. Optional
+    // for the same reason resourceItemsById is (an older build predating this file).
+    private val harvestMaterialsById: Map<Int, ItemSummary> by lazy {
+        val stream = ItemCatalog::class.java.getResourceAsStream("/harvest-materials.json")
+        if (stream == null) {
+            emptyMap()
+        } else {
+            json.decodeFromString<List<ItemSummary>>(stream.bufferedReader().readText()).associateBy { it.itemId }
+        }
+    }
+
     // Equipment wins on an id collision with resource items -- shouldn't happen (the CDN equip feed
     // and the encyclopedia categories this extractor covers are disjoint, confirmed during research).
     // Sublimations are a *real*, NOT hypothetical, collision though: items-extractor's encyclopedia
@@ -72,22 +83,28 @@ object ItemCatalog {
     // (items-extractor already downloaded it under the same id). Costumes are the same kind of real
     // collision (cosmetics also show up under the encyclopedia's "customization" category) --
     // equipment-adjacent-items.json's precise torch/tool/costume label wins over that generic one.
+    // Harvest materials are the same again -- resource-items.json's "resource" category can overlap
+    // with the same ids -- and harvest-materials.json is the more precise, first-party source.
     private val all: List<ItemInfoResponse> by lazy {
         val equipmentIds = equipmentById.keys
         val sublimationIds = sublimationsById.keys
         val equipmentAdjacentIds = equipmentAdjacentItemsById.keys
+        val harvestMaterialIds = harvestMaterialsById.keys
         equipmentById.values.map { it.toItemInfoResponse() } +
             sublimationsById.values.filterNot { it.zenithId in equipmentIds }.map { it.toItemInfoResponse() } +
             equipmentAdjacentItemsById.values.map { it.toItemInfoResponse() } +
+            harvestMaterialsById.values.map { it.toItemInfoResponse() } +
             resourceItemsById.values
-                .filterNot { it.itemId in equipmentIds || it.itemId in sublimationIds || it.itemId in equipmentAdjacentIds }
-                .map { it.toItemInfoResponse() }
+                .filterNot {
+                    it.itemId in equipmentIds || it.itemId in sublimationIds || it.itemId in equipmentAdjacentIds || it.itemId in harvestMaterialIds
+                }.map { it.toItemInfoResponse() }
     }
 
     fun findById(id: Int): ItemInfoResponse? =
         equipmentById[id]?.toItemInfoResponse()
             ?: sublimationsById[id]?.toItemInfoResponse()
             ?: equipmentAdjacentItemsById[id]?.toItemInfoResponse()
+            ?: harvestMaterialsById[id]?.toItemInfoResponse()
             ?: resourceItemsById[id]?.toItemInfoResponse()
 
     fun search(
@@ -130,22 +147,27 @@ private fun Equipment.toItemInfoResponse() =
     )
 
 private fun ItemSummary.toItemInfoResponse() =
-    ItemInfoResponse(itemId = itemId, name = name, level = level, rarity = rarity, iconKey = iconKey, category = category, isEquipment = false)
+    ItemInfoResponse(
+        itemId = itemId,
+        name = name,
+        level = level,
+        rarity = rarity,
+        iconKey = iconKey,
+        category = category,
+        isEquipment = false,
+        description = description
+    )
 
 // Sublimations aren't leveled (no character-level requirement) -- 0 is honest, not a placeholder for
-// missing data. SublimationRarity is a coarser 3-value scale than equipment's Rarity; NORMAL maps to
-// COMMON as the closest "base tier" analog (display-only -- nothing solver-facing reads this mapping).
+// missing data. rarity (SublimationRarity) is a slot-type classifier (epic/relic dedicated slot vs.
+// normal socket), not a display rarity -- gameRarity is the real in-game Rarity, sourced from the CDN
+// the same way equipment's is (see Sublimation.gameRarity's doc comment).
 private fun Sublimation.toItemInfoResponse() =
     ItemInfoResponse(
         itemId = zenithId,
         name = name,
         level = 0,
-        rarity =
-            when (rarity) {
-                SublimationRarity.EPIC -> Rarity.EPIC
-                SublimationRarity.RELIC -> Rarity.RELIC
-                SublimationRarity.NORMAL -> Rarity.COMMON
-            },
+        rarity = gameRarity,
         iconKey = zenithId,
         category = "sublimation",
         isEquipment = false

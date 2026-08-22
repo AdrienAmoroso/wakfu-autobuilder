@@ -48,7 +48,12 @@ internal fun SpellElement.shortCode(): String =
 /**
  * The boss's four elemental resistances as compact coloured badges (lower % = a weaker, better-to-hit
  * element). [highlight] emphasises a specific element (a forced choice); otherwise the weakest — the
- * one the objective would most likely auto-pick — is emphasised.
+ * one the objective would most likely auto-pick — is emphasised, UNLESS all four resistances tie
+ * (most commonly all-zero — true for 877/2846 monsters once this component started covering every
+ * monster, not just the ~226 bosses it was built for, where a tie is rare): `minByOrNull` would
+ * otherwise silently pick the first element (Fire, by [SpellElement.entries] order) and imply a fake
+ * weakness that isn't real. No chip is emphasised in that case, which the existing chip styling
+ * already renders as a neutral "no notable weakness" state.
  */
 @Composable
 internal fun BossResistanceChips(
@@ -57,7 +62,8 @@ internal fun BossResistanceChips(
     modifier: Modifier = Modifier,
 ) {
     val resistances = SpellElement.entries.map { it to boss.resistancePercent(it) }
-    val emphasised = highlight ?: resistances.minByOrNull { it.second }?.first
+    val hasNotableWeakness = resistances.map { it.second }.distinct().size > 1
+    val emphasised = highlight ?: if (hasNotableWeakness) resistances.minByOrNull { it.second }?.first else null
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -91,9 +97,9 @@ internal fun BossResistanceChips(
 /**
  * Resolves a monster's icon under `assets/monsters/` — the committed 200×200 boss portraits keyed by
  * [Monster.gfx]. (Unlike item/spell icons, monster portraits are NOT extracted from the client's gui.jar —
- * it only keys monsters by gfx as 132×41 banners — so the boss-picker portraits stay committed-static; all
- * bosses already have one.) Returns `null` when the sprite id is absent or the
- * asset is missing (e.g. a non-boss monster), so callers degrade to an empty tile rather
+ * it only keys monsters by gfx as 132×41 banners — so the boss-picker portraits stay committed-static.
+ * Most non-boss monsters, and a handful of bosses, have no portrait — see [MonsterIcon].) Returns `null`
+ * when the sprite id is absent or the asset is missing, so callers degrade to a placeholder rather
  * than crash. Mirrors [BreedAssets].
  */
 internal object MonsterAssets {
@@ -102,7 +108,11 @@ internal object MonsterAssets {
     private fun existing(path: String): String? = if (Thread.currentThread().contextClassLoader.getResource(path) != null) path else null
 }
 
-/** A monster's icon in a rounded tile (mirrors [ItemThumbnail]); shows an empty tile when art is missing. */
+/**
+ * A monster's icon in a rounded tile (mirrors [ItemThumbnail]). Most monsters have no portrait asset
+ * (only bosses and a few others were ever crawled) — that's an expected, common state, not a broken
+ * one, so it shows a muted placeholder glyph rather than a blank tile that reads as missing/loading art.
+ */
 @Composable
 internal fun MonsterIcon(
     monster: Monster,
@@ -125,6 +135,8 @@ internal fun MonsterIcon(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(size).padding(3.dp)
             )
+        } else {
+            Text(text = "?", style = WTypography.labelMedium.copy(color = WColor.faint, fontWeight = FontWeight.SemiBold))
         }
     }
 }

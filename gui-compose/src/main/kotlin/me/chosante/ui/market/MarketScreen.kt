@@ -241,7 +241,19 @@ private fun PricesTab(
 }
 
 private val MARKET_CATEGORIES =
-    listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous", "sublimation", "torch", "tool", "costume")
+    listOf(
+        "equipment",
+        "creature",
+        "resource",
+        "consumable",
+        "customization",
+        "miscellaneous",
+        "sublimation",
+        "torch",
+        "tool",
+        "costume",
+        "harvest-material"
+    )
 
 @Composable
 private fun MarketSearchBar(

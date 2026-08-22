@@ -14,6 +14,23 @@ enum class Rarity {
     EPIC,
 }
 
+/**
+ * Maps the CDN `items.json` feed's numeric `baseParameters.rarity` index to [Rarity] -- shared so
+ * every extractor that reads that field (equipments-extractor, bdata-extractor for sublimations)
+ * agrees on the same mapping instead of each keeping its own copy that can drift.
+ */
+val RARITY_ID_TO_RARITY: Map<Int, Rarity> =
+    mapOf(
+        0 to Rarity.COMMON,
+        1 to Rarity.UNCOMMON,
+        2 to Rarity.RARE,
+        3 to Rarity.MYTHIC,
+        4 to Rarity.LEGENDARY,
+        5 to Rarity.RELIC,
+        6 to Rarity.SOUVENIR,
+        7 to Rarity.EPIC
+    )
+
 @Serializable
 enum class ItemType(
     val id: Int,

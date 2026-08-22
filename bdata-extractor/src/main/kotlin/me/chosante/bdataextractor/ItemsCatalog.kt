@@ -3,6 +3,8 @@ package me.chosante.bdataextractor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import me.chosante.common.I18nText
+import me.chosante.common.RARITY_ID_TO_RARITY
+import me.chosante.common.Rarity
 import me.chosante.common.RuneColor
 import me.chosante.common.RuneType
 import me.chosante.common.SublimationRarity
@@ -26,6 +28,8 @@ data class SublimationMeta(
     val zenithId: Int,
     val name: I18nText,
     val rarity: SublimationRarity,
+    /** The sublimation's real in-game [Rarity] (Common/Uncommon/Rare/.../Epic) -- see [Sublimation.gameRarity]. */
+    val gameRarity: Rarity,
     /** Normal subs: 3 socket colours (1=red, 2=green, 3=blue). Empty for epic/relic. */
     val slotColorPattern: List<Int>,
     /**
@@ -166,6 +170,7 @@ object ItemsCatalog {
                             sp.isRelic -> SublimationRarity.RELIC
                             else -> SublimationRarity.NORMAL
                         },
+                    gameRarity = RARITY_ID_TO_RARITY[core.baseParameters.rarity] ?: Rarity.COMMON,
                     slotColorPattern = sp.slotColorPattern,
                     maxTier = (maxTierByState[stateId] ?: 1).coerceAtLeast(1)
                 )
@@ -198,6 +203,7 @@ object ItemsCatalog {
     @Serializable
     private data class BaseParams(
         val itemTypeId: Int,
+        val rarity: Int = 0,
     )
 
     @Serializable

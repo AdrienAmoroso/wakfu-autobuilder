@@ -631,6 +631,7 @@ fun buildSublimations(
             zenithId = m.zenithId,
             name = m.name,
             rarity = m.rarity,
+            gameRarity = m.gameRarity,
             slotColorPattern = m.slotColorPattern,
             maxStackLevel = maxStackLevel,
             maxTier = maxTier,

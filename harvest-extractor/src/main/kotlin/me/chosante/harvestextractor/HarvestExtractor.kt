@@ -3,6 +3,8 @@ package me.chosante.harvestextractor
 import me.chosante.common.HarvestDrop
 import me.chosante.common.HarvestNode
 import me.chosante.common.I18nText
+import me.chosante.common.ItemSummary
+import me.chosante.common.Rarity
 import me.chosante.harvestextractor.dataretriever.WakfuHarvestData
 
 /**
@@ -41,6 +43,40 @@ fun extractHarvestNodes(data: WakfuHarvestData): List<HarvestNode> {
             drops = drops
         )
     }
+}
+
+/**
+ * The item catalog's "Unknown item" gap was overwhelmingly harvest-node drop materials (445/452
+ * ids, 98.5% -- see the research behind this function): almost every raw harvestable (ores, wood,
+ * fish, fruit…) had no name/icon anywhere, because it's neither in the CDN equip feed (`items.json`,
+ * confirmed absent by a live fetch) nor in `items-extractor`'s encyclopedia crawl. This closes that
+ * gap using data `harvest-extractor` already has: dedupe [WakfuHarvestData.collectibleResources] by
+ * [me.chosante.harvestextractor.dataretriever.dtos.CollectibleResource.collectItemId] (the item id,
+ * distinct from the node id), then borrow the source node's name/icon for it (see
+ * [CollectibleResource]'s doc comment for why that's a valid substitute name, not a guess).
+ *
+ * [level] and [rarity] aren't present in this data (`resources.json` has no such fields) --
+ * defaulted honestly rather than fabricated: `level = 0` (unknown, not "level-less" the way a
+ * sublimation's 0 is) and `rarity = COMMON` (a safe inference here, unlike sublimations which
+ * genuinely span every tier: raw harvestable materials are near-universally Common tier by Wakfu's
+ * own conventions).
+ */
+fun extractHarvestMaterials(data: WakfuHarvestData): List<ItemSummary> {
+    val nodesById = data.resourceNodes.associateBy { it.definition.id }
+    return data.collectibleResources
+        .filter { it.collectItemId != 0 }
+        .distinctBy { it.collectItemId }
+        .mapNotNull { collectible ->
+            val node = nodesById[collectible.resourceId] ?: return@mapNotNull null
+            ItemSummary(
+                itemId = collectible.collectItemId,
+                name = node.title,
+                level = 0,
+                rarity = Rarity.COMMON,
+                category = "harvest-material",
+                iconKey = node.definition.iconGfxId
+            )
+        }
 }
 
 private fun I18nText.withStageSuffix(stage: Int) =

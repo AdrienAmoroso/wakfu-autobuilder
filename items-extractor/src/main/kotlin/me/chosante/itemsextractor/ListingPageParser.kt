@@ -1,12 +1,13 @@
 package me.chosante.itemsextractor
 
-/** One row of an encyclopedia category listing table (icon / name / rarity / level per item). */
+/** One row of an encyclopedia category listing table (icon / name / rarity / level / detail-page href per item). */
 data class ListingRow(
     val itemId: Int,
     val name: String,
     val rarityIndex: Int,
     val level: Int,
     val iconUrl: String,
+    val href: String,
 )
 
 /**
@@ -25,7 +26,9 @@ object ListingPageParser {
     private val idRegex = Regex("""linker_item_(\d+)""")
     private val iconRegex = Regex("""<img src="(https://static\.ankama\.com/[^"]+)"""")
     private val rarityRegex = Regex("""ak-rarity-(\d+)"""")
-    private val nameRegex = Regex("""ak-rarity-\d+"[^>]*></span><span class="ak-linker"><a href="[^"]*">([^<]+)</a>""")
+
+    // Captures the item's detail-page href alongside its name -- both live in the same anchor tag.
+    private val nameRegex = Regex("""ak-rarity-\d+"[^>]*></span><span class="ak-linker"><a href="([^"]*)">([^<]+)</a>""")
 
     // "Lvl 231" on English pages, "Niv. 231" on French ones -- the French listing pages are only
     // crawled for names (see Main.kt), but this must still match there or the whole row is dropped
@@ -50,20 +53,16 @@ object ListingPageParser {
                         ?.groupValues
                         ?.get(1)
                         ?.toIntOrNull() ?: return@mapNotNull null
-                val name =
-                    nameRegex
-                        .find(row)
-                        ?.groupValues
-                        ?.get(1)
-                        ?.trim()
-                        ?.ifBlank { null } ?: return@mapNotNull null
+                val nameMatch = nameRegex.find(row) ?: return@mapNotNull null
+                val href = nameMatch.groupValues[1].ifBlank { null } ?: return@mapNotNull null
+                val name = nameMatch.groupValues[2].trim().ifBlank { null } ?: return@mapNotNull null
                 val level =
                     levelRegex
                         .find(row)
                         ?.groupValues
                         ?.get(1)
                         ?.toIntOrNull() ?: return@mapNotNull null
-                ListingRow(id, name, rarityIndex, level, icon)
+                ListingRow(id, name, rarityIndex, level, icon, href)
             }.toList()
 
     /** The highest `?page=N` link on a listing page (its own page always included), or 1 if unpaginated. */

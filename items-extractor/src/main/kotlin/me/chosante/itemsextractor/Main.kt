@@ -45,7 +45,8 @@ private val rarityIndexToRarity =
  *   to cover -- resources, consumables, cosmetics and misc items, none of which have an
  *   equipment-style CDN feed (see `ItemSummary`'s doc comment and this module's research trail for
  *   why). Also downloads
- *   each item's hosted icon straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`.
+ *   each item's hosted icon straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`,
+ *   and (see [crawlItemDescriptions]) each item's flavor-text description off its own detail page.
  * - `autobuilder/src/main/resources/monster-drops.json`: every listed monster's drop table -- see
  *   `MonsterDropCrawler.kt`.
  *
@@ -64,10 +65,11 @@ suspend fun main() {
     val iconsDir = File(repoRoot, "gui-compose/src/main/resources/assets/items")
     var iconsDownloaded = 0
     var iconsFailed = 0
+    var descriptionsFound = 0
 
     for (category in CATEGORIES) {
         val enRows = mutableMapOf<Int, ListingRow>()
-        val frNames = mutableMapOf<Int, String>()
+        val frRows = mutableMapOf<Int, ListingRow>()
 
         val firstEnPage =
             client.fetch(
@@ -96,10 +98,11 @@ suspend fun main() {
                     "${EncyclopediaClient.BASE}/fr/mmorpg/encyclopedie/${category.frSlug}?page=$page",
                     cacheKey = "${category.label}-fr-$page"
                 ) ?: continue
-            ListingPageParser.parseRows(html).forEach { frNames[it.itemId] = it.name }
+            ListingPageParser.parseRows(html).forEach { frRows[it.itemId] = it }
         }
 
         var skippedRarity = 0
+        var categoryDescriptionsFound = 0
         for (row in enRows.values) {
             val rarity = rarityIndexToRarity[row.rarityIndex]
             if (rarity == null) {
@@ -108,7 +111,10 @@ suspend fun main() {
                 continue
             }
             val enName = row.name
-            val frName = frNames[row.itemId] ?: enName
+            val frRow = frRows[row.itemId]
+            val frName = frRow?.name ?: enName
+            val description = crawlItemDescription(client, itemId = row.itemId, enHref = row.href, frHref = frRow?.href)
+            if (description != null) categoryDescriptionsFound++
             allItems +=
                 ItemSummary(
                     itemId = row.itemId,
@@ -116,7 +122,8 @@ suspend fun main() {
                     level = row.level,
                     rarity = rarity,
                     category = category.label,
-                    iconKey = row.itemId
+                    iconKey = row.itemId,
+                    description = description
                 )
             if (client.download(row.iconUrl, File(iconsDir, "${row.itemId}.png"))) {
                 iconsDownloaded++
@@ -124,9 +131,11 @@ suspend fun main() {
                 iconsFailed++
             }
         }
+        descriptionsFound += categoryDescriptionsFound
 
         println(
-            "  ${category.label}: ${enRows.size} items across $maxPage page(s), ${frNames.size} FR names resolved" +
+            "  ${category.label}: ${enRows.size} items across $maxPage page(s), ${frRows.size} FR names resolved, " +
+                "$categoryDescriptionsFound descriptions found" +
                 if (skippedRarity > 0) ", $skippedRarity skipped (unknown rarity)" else ""
         )
     }
@@ -135,7 +144,7 @@ suspend fun main() {
     val outputFile = File(outputDir, "resource-items.json")
     outputFile.writeText(Json.encodeToString(ListSerializer(ItemSummary.serializer()), allItems.sortedBy { it.itemId }))
 
-    println("\nWrote ${allItems.size} items -> ${outputFile.name}")
+    println("\nWrote ${allItems.size} items -> ${outputFile.name} ($descriptionsFound with a description)")
     println("Icons: $iconsDownloaded downloaded/already-present, $iconsFailed failed")
 
     println("\nCrawling the bestiary for drop tables…")

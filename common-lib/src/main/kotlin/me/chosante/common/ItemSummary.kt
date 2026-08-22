@@ -24,4 +24,9 @@ data class ItemSummary(
     val rarity: Rarity,
     val category: String,
     val iconKey: Int,
+    /** Flavor text, EN+FR from the encyclopedia's own per-item detail page (see `items-extractor`'s
+     * `crawlItemDescriptions`); es/pt fall back to the English text (no es/pt locale exists there,
+     * same fallback [name] already uses). Null when the item has none, or for sources that don't
+     * crawl detail pages (equipment, sublimations, harvest materials). */
+    val description: I18nText? = null,
 )

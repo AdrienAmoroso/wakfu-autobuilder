@@ -5,20 +5,10 @@ import me.chosante.common.Equipment
 import me.chosante.common.I18nText
 import me.chosante.common.ItemSummary
 import me.chosante.common.ItemType
-import me.chosante.common.Rarity
+import me.chosante.common.RARITY_ID_TO_RARITY
 import me.chosante.equipmentextractor.dataretriever.WakfuData
 
-val rarityIdToRarity =
-    mapOf(
-        0 to Rarity.COMMON,
-        1 to Rarity.UNCOMMON,
-        2 to Rarity.RARE,
-        3 to Rarity.MYTHIC,
-        4 to Rarity.LEGENDARY,
-        5 to Rarity.RELIC,
-        6 to Rarity.SOUVENIR,
-        7 to Rarity.EPIC
-    )
+val rarityIdToRarity = RARITY_ID_TO_RARITY
 
 val faultyAction39ItemIds =
     listOf(

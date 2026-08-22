@@ -120,6 +120,7 @@ data class ItemInfoResponse(
     val characteristics: Map<Characteristic, Int> = emptyMap(),
     val itemType: ItemType? = null,
     val maxShardSlots: Int? = null,
+    val description: I18nText? = null,
 )
 
 @Serializable

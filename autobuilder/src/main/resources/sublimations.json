@@ -9,6 +9,7 @@
       "pt": "Inflexibilidade"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -42,6 +43,7 @@
       "pt": "Constância"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -72,6 +74,7 @@
       "pt": "Medida"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -102,6 +105,7 @@
       "pt": "Precisão Cirúrgica"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "RANGE_AT_MOST",
@@ -119,6 +123,7 @@
       "pt": "Desenlace"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "CONVERSION",
     "solverChoosable": true,
     "condition": {
@@ -145,6 +150,7 @@
       "pt": "Despedaça-Carapaça"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -157,6 +163,7 @@
       "pt": "Alternância"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -169,6 +176,7 @@
       "pt": "Confiança"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -189,6 +197,7 @@
       "pt": "Braseiro"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -209,6 +218,7 @@
       "pt": "Robusto"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -221,6 +231,7 @@
       "pt": "Manejo: Duas mãos"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "AP_AT_MOST",
@@ -250,6 +261,7 @@
       "pt": "Runa Relíquia de Alternância II"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -262,6 +274,7 @@
       "pt": "Brisa"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -282,6 +295,7 @@
       "pt": "Diretivas"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -302,6 +316,7 @@
       "pt": "Manejo: Escudo"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -327,6 +342,7 @@
       "pt": "Manejo: Adaga"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -355,6 +371,7 @@
       "pt": "Runa Relíquia de Excesso"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -375,6 +392,7 @@
       "pt": "Runa Relíquia de Sangue do Talho"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -395,6 +413,7 @@
       "pt": "Nhé"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -407,6 +426,7 @@
       "pt": "Pacto Wakfu"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -432,6 +452,7 @@
       "pt": "Runa Épica de Saúde de Ferro"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -452,6 +473,7 @@
       "pt": "Runa Épica de Arte do Posicionamento"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "solverChoosable": true,
     "effects": [
@@ -478,6 +500,7 @@
       "pt": "Runa Épica de Anatomia"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "solverChoosable": true,
     "effects": [
@@ -507,6 +530,7 @@
       "pt": "Runa Épica de Brutalidade"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "RANGE_EXACT",
@@ -531,6 +555,7 @@
       "pt": "Runa Épica de Força Hercúlea"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -560,6 +585,7 @@
       "pt": "Concentração Elementar"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "solverChoosable": true,
     "effects": [
@@ -581,6 +607,7 @@
       "pt": "Estasificação"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -601,6 +628,7 @@
       "pt": "Runa Relíquia de Aura de Chamas"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -613,6 +641,7 @@
       "pt": "Runa Relíquia de Guarda Baixada"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -625,6 +654,7 @@
       "pt": "Arma de Luz"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -645,6 +675,7 @@
       "pt": "Ruína II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -664,6 +695,7 @@
       "pt": "Devastação II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -699,6 +731,7 @@
       "pt": "Assolação II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -772,6 +805,7 @@
       "pt": "Carnificina II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -800,6 +834,7 @@
       "pt": "Cicatrização II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -819,6 +854,7 @@
       "pt": "Emboscada II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -846,6 +882,7 @@
       "pt": "Evasão II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -873,6 +910,7 @@
       "pt": "Determinação II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -900,6 +938,7 @@
       "pt": "Tenacidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -931,6 +970,7 @@
       "pt": "Solidez II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -950,6 +990,7 @@
       "pt": "Firmeza II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -977,6 +1018,7 @@
       "pt": "Leveza II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1004,6 +1046,7 @@
       "pt": "Topologia II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -1031,6 +1074,7 @@
       "pt": "Reprovação II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1058,6 +1102,7 @@
       "pt": "Frenesi II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -1077,6 +1122,7 @@
       "pt": "Dimensionalidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -1104,6 +1150,7 @@
       "pt": "Teoria da Matéria II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -1137,6 +1184,7 @@
       "pt": "Volta PA II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1156,6 +1204,7 @@
       "pt": "Resistência II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1175,6 +1224,7 @@
       "pt": "Escamas de Lua II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -1194,6 +1244,7 @@
       "pt": "Presteza II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1229,6 +1280,7 @@
       "pt": "Salvaguarda II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1256,6 +1308,7 @@
       "pt": "Boa Ação"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -1273,6 +1326,7 @@
       "pt": "Vivacidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -1308,6 +1362,7 @@
       "pt": "Crítico Berserk II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -1339,6 +1394,7 @@
       "pt": "Visibilidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -1380,6 +1436,7 @@
       "pt": "Ruína Cíclica II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -1399,6 +1456,7 @@
       "pt": "Bloqueio Berserk II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -1430,6 +1488,7 @@
       "pt": "Assolação Secundária II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -1468,6 +1527,7 @@
       "pt": "Evasão Lenta II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -1487,6 +1547,7 @@
       "pt": "Emboscada Afastada II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -1514,6 +1575,7 @@
       "pt": "Espinhos II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -1533,6 +1595,7 @@
       "pt": "Esquiva Berserk II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -1564,6 +1627,7 @@
       "pt": "Barreira a Distância II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -1583,6 +1647,7 @@
       "pt": "Barreira Curta Distância II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -1602,6 +1667,7 @@
       "pt": "Persistência I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -1633,6 +1699,7 @@
       "pt": "Insistência II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -1660,6 +1727,7 @@
       "pt": "Desenvoltura II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1687,6 +1755,7 @@
       "pt": "Parada Berserk II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -1718,6 +1787,7 @@
       "pt": "Poço de Vitalidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1737,6 +1807,7 @@
       "pt": "Influência II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -1766,6 +1837,7 @@
       "pt": "Furor II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -1793,6 +1865,7 @@
       "pt": "Muralha II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -1812,6 +1885,7 @@
       "pt": "Ciclotimia II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -1831,6 +1905,7 @@
       "pt": "Volta PM II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1850,6 +1925,7 @@
       "pt": "Prosperidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1869,6 +1945,7 @@
       "pt": "Clamor I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -1896,6 +1973,7 @@
       "pt": "Focalização II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -1923,6 +2001,7 @@
       "pt": "Extensão II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -1950,6 +2029,7 @@
       "pt": "Especialista em Paradas II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -1978,6 +2058,7 @@
       "pt": "Invólucro Rochoso II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -1997,6 +2078,7 @@
       "pt": "Influência Lenta II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -2016,6 +2098,7 @@
       "pt": "Especialista em Golpes Críticos II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -2035,6 +2118,7 @@
       "pt": "Espanto II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -2067,6 +2151,7 @@
       "pt": "Cicatrização"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -2084,6 +2169,7 @@
       "pt": "Integridade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -2103,6 +2189,7 @@
       "pt": "Lobo Solitário II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -2130,6 +2217,7 @@
       "pt": "Segredo da Vida II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -2149,6 +2237,7 @@
       "pt": "Tolerância II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -2176,6 +2265,7 @@
       "pt": "Fúria"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -2209,6 +2299,7 @@
       "pt": "Fúria II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -2243,6 +2334,7 @@
       "pt": "Pilar"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "BLOCK_AT_LEAST",
@@ -2260,6 +2352,7 @@
       "pt": "Controle do Espaço"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "RANGE_EXACT",
@@ -2284,6 +2377,7 @@
       "pt": "Longevidade"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -2296,6 +2390,7 @@
       "pt": "Energia Ancestral"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -2308,6 +2403,7 @@
       "pt": "Renascimento"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -2328,6 +2424,7 @@
       "pt": "Pacífico"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -2340,6 +2437,7 @@
       "pt": "Arma Sólida II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -2367,6 +2465,7 @@
       "pt": "Potência Bruta II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -2394,6 +2493,7 @@
       "pt": "Retorno das Chamas II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -2413,6 +2513,7 @@
       "pt": "Influência do Wakfu II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       1,
@@ -2440,6 +2541,7 @@
       "pt": "Wakfu Berserk II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -2467,6 +2569,7 @@
       "pt": "Arma Envenenada II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -2494,6 +2597,7 @@
       "pt": "Roubo de Bloqueio II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -2521,6 +2625,7 @@
       "pt": "Roubo de Esquiva II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       2,
@@ -2548,6 +2653,7 @@
       "pt": "Contra-Ataque II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -2567,6 +2673,7 @@
       "pt": "Especialista em Armas Leves II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -2598,6 +2705,7 @@
       "pt": "Arcanos II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -2617,6 +2725,7 @@
       "pt": "Relações Sociais II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -2647,6 +2756,7 @@
       "pt": "Volta Vital II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -2666,6 +2776,7 @@
       "pt": "Destruição II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -2705,6 +2816,7 @@
       "pt": "Sensibilidade II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -2732,6 +2844,7 @@
       "pt": "Extensão da Armadura II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -2751,6 +2864,7 @@
       "pt": "Altruísmo II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       2,
@@ -2778,6 +2892,7 @@
       "pt": "Mania II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -2797,6 +2912,7 @@
       "pt": "Natureza II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -2824,6 +2940,7 @@
       "pt": "Último Suspiro II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -2851,6 +2968,7 @@
       "pt": "Mãozinha II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       1,
@@ -2870,6 +2988,7 @@
       "pt": "Pé Firme II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -2889,6 +3008,7 @@
       "pt": "Meia-Volta II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -2908,6 +3028,7 @@
       "pt": "Coragem I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       1,
@@ -2927,6 +3048,7 @@
       "pt": "Revigorada I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -2946,6 +3068,7 @@
       "pt": "Precaução I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -2965,6 +3088,7 @@
       "pt": "Crítico Técnico I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -2992,6 +3116,7 @@
       "pt": "Parada Ofensiva I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -3024,6 +3149,7 @@
       "pt": "Crítico Estratégico I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3059,6 +3185,7 @@
       "pt": "Neutralidade I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -3127,6 +3254,7 @@
       "pt": "Pretensão I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -3159,6 +3287,7 @@
       "pt": "Combate Aproximado I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3200,6 +3329,7 @@
       "pt": "Carapaça I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       3,
@@ -3235,6 +3365,7 @@
       "pt": "Armadura Pesada I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3270,6 +3401,7 @@
       "pt": "Temporização I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -3297,6 +3429,7 @@
       "pt": "Preparação Crítica I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3316,6 +3449,7 @@
       "pt": "Trancamento I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -3343,6 +3477,7 @@
       "pt": "Peso-pena I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -3374,6 +3509,7 @@
       "pt": "Ambição I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -3406,6 +3542,7 @@
       "pt": "Excesso II"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -3426,6 +3563,7 @@
       "pt": "Lunático"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -3438,6 +3576,7 @@
       "pt": "Controle do Espaço II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "RANGE_AT_LEAST",
@@ -3455,6 +3594,7 @@
       "pt": "Inflexibilidade II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -3480,6 +3620,7 @@
       "pt": "Sentinela"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -3505,6 +3646,7 @@
       "pt": "Assimilação"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -3545,6 +3687,7 @@
       "pt": "Arte do Escondimento I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       3,
@@ -3572,6 +3715,7 @@
       "pt": "Loucura I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3599,6 +3743,7 @@
       "pt": "Soca-Carapaça I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3626,6 +3771,7 @@
       "pt": "Temeridade I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       3,
@@ -3645,6 +3791,7 @@
       "pt": "Loucura Vampírica I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3664,6 +3811,7 @@
       "pt": "Acumulação I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -3683,6 +3831,7 @@
       "pt": "Conservação I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -3702,6 +3851,7 @@
       "pt": "Carapaça Sanguínea I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       1,
@@ -3721,6 +3871,7 @@
       "pt": "Retorno da Armadura II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -3740,6 +3891,7 @@
       "pt": "Proveito I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       3,
@@ -3759,6 +3911,7 @@
       "pt": "Força Branda I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -3786,6 +3939,7 @@
       "pt": "Agilidade Vital II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       2,
       3,
@@ -3813,6 +3967,7 @@
       "pt": "Força Vital II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       2,
@@ -3840,6 +3995,7 @@
       "pt": "Influência Vital I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -3868,6 +4024,7 @@
       "pt": "Influência Paradoxal I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -3887,6 +4044,7 @@
       "pt": "Evasão I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       3,
@@ -3915,6 +4073,7 @@
       "pt": "Interceptação I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -3943,6 +4102,7 @@
       "pt": "Fuga I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -3970,6 +4130,7 @@
       "pt": "Interposição I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -3989,6 +4150,7 @@
       "pt": "Brilhantismo"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -4009,6 +4171,7 @@
       "pt": "Contato"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4021,6 +4184,7 @@
       "pt": "Cara a Cara"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4033,6 +4197,7 @@
       "pt": "Hipermetrope"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -4053,6 +4218,7 @@
       "pt": "Distribuição"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4065,6 +4231,7 @@
       "pt": "Constância II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "CRIT_AT_MOST",
@@ -4082,6 +4249,7 @@
       "pt": "Elementalismo"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -4102,6 +4270,7 @@
       "pt": "Caos"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -4123,6 +4292,7 @@
       "pt": "Abnegação"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "solverChoosable": true,
     "effects": [
@@ -4144,6 +4314,7 @@
       "pt": "Engajamento"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "SECONDARY_MASTERIES_AT_MOST",
@@ -4161,6 +4332,7 @@
       "pt": "Força de Vontade"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -4186,6 +4358,7 @@
       "pt": "Desmesura"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -4211,6 +4384,7 @@
       "pt": "Alocentrismo I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -4230,6 +4404,7 @@
       "pt": "Enfeite I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       3,
@@ -4257,6 +4432,7 @@
       "pt": "Último Instante"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -4277,6 +4453,7 @@
       "pt": "Arrogância"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "FLAT",
     "effects": [
       {
@@ -4297,6 +4474,7 @@
       "pt": "Modularidade"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4309,6 +4487,7 @@
       "pt": "Calibragem"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4321,6 +4500,7 @@
       "pt": "Veemência"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4333,6 +4513,7 @@
       "pt": "Além da Barreira"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -4353,6 +4534,7 @@
       "pt": "Couraça Singular"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4365,6 +4547,7 @@
       "pt": "Calibragem II"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4377,6 +4560,7 @@
       "pt": "Lunático II"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4389,6 +4573,7 @@
       "pt": "Aprumo Natural"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -4409,6 +4594,7 @@
       "pt": "Petulância"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4421,6 +4607,7 @@
       "pt": "Afã"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4433,6 +4620,7 @@
       "pt": "Lentidão Involuntária"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4445,6 +4633,7 @@
       "pt": "Pilar II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "condition": {
       "type": "BLOCK_AT_LEAST",
@@ -4462,6 +4651,7 @@
       "pt": "Medida II"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -4492,6 +4682,7 @@
       "pt": "Vontade Direta I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -4519,6 +4710,7 @@
       "pt": "Vontade Indireta I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -4546,6 +4738,7 @@
       "pt": "Acribia I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -4573,6 +4766,7 @@
       "pt": "Visão Intermediária I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       1,
@@ -4600,6 +4794,7 @@
       "pt": "Evasão Contínua I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -4629,6 +4824,7 @@
       "pt": "Escudo Crítico I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -4658,6 +4854,7 @@
       "pt": "Salvaguarda do Wakfu II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       1,
       3,
@@ -4677,6 +4874,7 @@
       "pt": "Escudo Dorsal I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -4706,6 +4904,7 @@
       "pt": "Propagação I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -4725,6 +4924,7 @@
       "pt": "Valor Adicionado I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -4744,6 +4944,7 @@
       "pt": "Sanguinolência I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -4763,6 +4964,7 @@
       "pt": "Represália I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -4790,6 +4992,7 @@
       "pt": "Casco I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -4809,6 +5012,7 @@
       "pt": "Ruptura Violenta I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -4828,6 +5032,7 @@
       "pt": "Ruptura de PA II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       3,
@@ -4847,6 +5052,7 @@
       "pt": "Couraça Singular II"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4859,6 +5065,7 @@
       "pt": "Controle do Tempo"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -4871,6 +5078,7 @@
       "pt": "Medida III"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {
@@ -4896,6 +5104,7 @@
       "pt": "Equilíbrio Crítico I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -4923,6 +5132,7 @@
       "pt": "Consolação Crítica I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -4942,6 +5152,7 @@
       "pt": "Última Armadura I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       3,
@@ -4961,6 +5172,7 @@
       "pt": "Última Cura I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -4980,6 +5192,7 @@
       "pt": "Últimas Resistências I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       2,
@@ -5007,6 +5220,7 @@
       "pt": "Queimadura Secundária I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -5026,6 +5240,7 @@
       "pt": "Congelamento Secundário I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -5045,6 +5260,7 @@
       "pt": "Telurismo Secundário I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       3,
@@ -5064,6 +5280,7 @@
       "pt": "Ventilação Secundária I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       2,
@@ -5083,6 +5300,7 @@
       "pt": "Queimadura I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -5114,6 +5332,7 @@
       "pt": "Congelamento I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       3,
@@ -5145,6 +5364,7 @@
       "pt": "Telurismo I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       2,
@@ -5176,6 +5396,7 @@
       "pt": "Ventilação I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       3,
@@ -5207,6 +5428,7 @@
       "pt": "Preparo Secundário I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       3,
       1,
@@ -5234,6 +5456,7 @@
       "pt": "Impulsão I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       1,
@@ -5253,6 +5476,7 @@
       "pt": "Sentença I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       1,
       1,
@@ -5280,6 +5504,7 @@
       "pt": "Diagnóstico I"
     },
     "rarity": "NORMAL",
+    "gameRarity": "RARE",
     "slotColorPattern": [
       2,
       3,
@@ -5307,6 +5532,7 @@
       "pt": "Salvaguarda Crítica II"
     },
     "rarity": "NORMAL",
+    "gameRarity": "MYTHIC",
     "slotColorPattern": [
       3,
       1,
@@ -5334,6 +5560,7 @@
       "pt": "Selo de Wakfu"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL"
   },
   {
@@ -5346,6 +5573,7 @@
       "pt": "Parada Única"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -5366,6 +5594,7 @@
       "pt": "Absolvição"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -5391,6 +5620,7 @@
       "pt": "Castigo"
     },
     "rarity": "RELIC",
+    "gameRarity": "MYTHIC",
     "kind": "COMBAT_CONDITIONAL",
     "effects": [
       {
@@ -5416,6 +5646,7 @@
       "pt": "Segredo Crítico"
     },
     "rarity": "EPIC",
+    "gameRarity": "MYTHIC",
     "kind": "STATIC_CONDITIONAL",
     "solverChoosable": true,
     "condition": {

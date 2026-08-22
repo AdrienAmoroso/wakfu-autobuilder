@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -290,6 +291,12 @@ private fun ItemDetailContent(
         modifier = Modifier.widthIn(min = 200.dp, max = 300.dp).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        item.description?.localized(lang)?.takeIf { it.isNotBlank() }?.let { description ->
+            Text(
+                text = description,
+                style = WTypography.bodySmall.copy(color = WColor.muted, fontStyle = FontStyle.Italic)
+            )
+        }
         item.itemType?.let { itemType ->
             Text(text = itemType.label(lang), style = WTypography.labelSmall.copy(color = WColor.muted))
         }

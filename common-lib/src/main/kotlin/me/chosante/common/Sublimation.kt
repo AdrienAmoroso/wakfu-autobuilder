@@ -283,6 +283,15 @@ data class Sublimation(
     val zenithId: Int = 0,
     val name: I18nText,
     val rarity: SublimationRarity,
+    /**
+     * The sublimation's REAL in-game rarity (Common/Uncommon/Rare/Mythic/Legendary/Relic/Souvenir/Epic),
+     * sourced from the CDN `items.json` feed's `baseParameters.rarity` the same way equipment's
+     * [Rarity] is -- distinct from [rarity] ([SublimationRarity]), which is a slot-type classifier
+     * (epic/relic dedicated slot vs. normal 3-colour socket), NOT a display rarity. Every "normal
+     * socket" sub used to display as Common regardless of its real tier because [rarity] was the
+     * only rarity-ish field being mapped; this is the fix.
+     */
+    val gameRarity: Rarity = Rarity.COMMON,
     /** Normal subs: 3 socket colours (`1`=red, `2`=green, `3`=blue, matching [RuneColor]). Empty for epic/relic. */
     val slotColorPattern: List<Int> = emptyList(),
     /**

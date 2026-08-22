@@ -3,6 +3,7 @@ package me.chosante.harvestextractor
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import me.chosante.common.HarvestNode
+import me.chosante.common.ItemSummary
 import me.chosante.common.WakfuData
 import me.chosante.common.findRepositoryRoot
 import me.chosante.harvestextractor.dataretriever.getWakfuHarvestData
@@ -39,4 +40,10 @@ suspend fun main() {
         .writeText(Json.encodeToString(ListSerializer(HarvestNode.serializer()), nodes))
 
     println("Wrote ${nodes.size} nodes -> harvest-nodes.json (data version $version)")
+
+    val materials = extractHarvestMaterials(rawData)
+    File(outputDirectory, "harvest-materials.json")
+        .writeText(Json.encodeToString(ListSerializer(ItemSummary.serializer()), materials))
+
+    println("Wrote ${materials.size} harvest materials -> harvest-materials.json (data version $version)")
 }

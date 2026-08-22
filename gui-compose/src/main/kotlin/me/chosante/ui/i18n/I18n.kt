@@ -711,6 +711,7 @@ enum class Tr(
     CATEGORY_TORCH("Torches", "Torches"),
     CATEGORY_TOOL("Tools", "Outils"),
     CATEGORY_COSTUME("Costumes", "Costumes"),
+    CATEGORY_HARVEST_MATERIAL("Harvest materials", "Matériaux récoltables"),
     PREVIOUS_PAGE("Previous", "Précédent"),
     NEXT_PAGE("Next", "Suivant"),
     PAGE_LABEL("Page %d / %d", "Page %d / %d"),
@@ -891,6 +892,7 @@ fun categoryLabel(
         "torch" -> Tr.CATEGORY_TORCH.value(lang)
         "tool" -> Tr.CATEGORY_TOOL.value(lang)
         "costume" -> Tr.CATEGORY_COSTUME.value(lang)
+        "harvest-material" -> Tr.CATEGORY_HARVEST_MATERIAL.value(lang)
         else -> category
     }
 

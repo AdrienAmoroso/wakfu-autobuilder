@@ -32,7 +32,12 @@ data class ResourceTypeDef(
 /**
  * `collectibleResources.json` -- the missing link between a [ResourceNode] and its loot table: one
  * row per harvestable growth stage of a node ([resourceIndex]), pointing at the [HarvestLoot] rows
- * that share its [collectLootListId].
+ * that share its [collectLootListId]. [collectItemId] is the id of the item this stage's harvest
+ * actually yields -- DISTINCT from [resourceId] (the node's own id, e.g. "Iced Cranberry" the bush)
+ * -- confirmed by a live CDN fetch: [resourceId] resolves through [ResourceNode.title] to the same
+ * name as the harvested item (Wakfu names materials after their source node), which is how
+ * `extractHarvestMaterials` gives every harvested material a real name/icon without any encyclopedia
+ * scraping. Not every row necessarily carries one (default 0 = none).
  */
 @Serializable
 data class CollectibleResource(
@@ -41,6 +46,7 @@ data class CollectibleResource(
     val resourceIndex: Int,
     val skillLevelRequired: Int,
     val collectLootListId: Int,
+    val collectItemId: Int = 0,
 )
 
 /** `harvestLoots.json` -- one possible drop; several rows share a [listId] (one node stage's loot table). */
