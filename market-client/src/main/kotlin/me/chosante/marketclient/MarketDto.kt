@@ -81,6 +81,7 @@ data class IngredientCost(
 @Serializable
 data class CraftCostResponse(
     val itemId: Int,
+    val jobName: I18nText,
     val craftCost: Long? = null,
     val marketPrice: Long? = null,
     val grossMargin: Long? = null,
@@ -90,6 +91,18 @@ data class CraftCostResponse(
     val missingPriceCount: Int,
     val decision: String,
     val ingredients: List<IngredientCost>,
+)
+
+// Mirrors market-server's own DTO exactly -- the per-line detail behind HarvestOpportunity's and
+// MonsterFarmingOpportunity's aggregate expectedValue/missingDropCount, the same "aggregate +
+// per-line detail" shape CraftCostResponse already uses for its ingredients. unitPrice null means
+// this drop has no captured price.
+@Serializable
+data class DropInfo(
+    val itemId: Int,
+    val dropRate: Double,
+    val quantity: Int,
+    val unitPrice: Long? = null,
 )
 
 // Mirrors market-server's own DTO exactly -- see its doc comment for why the shape is unified
@@ -126,6 +139,7 @@ data class HarvestOpportunity(
     val node: HarvestNode,
     val expectedValue: Long? = null,
     val missingDropCount: Int = 0,
+    val drops: List<DropInfo> = emptyList(),
 )
 
 // Mirrors market-server's own DTO exactly -- the Kamas screen's Monster Farming tab. See
@@ -136,6 +150,7 @@ data class MonsterFarmingOpportunity(
     val expectedValue: Long? = null,
     val missingDropCount: Int = 0,
     val totalDropCount: Int = 0,
+    val drops: List<DropInfo> = emptyList(),
 )
 
 // phase: "idle" | "capturing" | "processing" | "error" -- mirrors market-server's own DTO exactly.

@@ -96,6 +96,7 @@ object CraftCostService {
 
         return CraftCostResponse(
             itemId = recipe.itemId,
+            jobName = recipe.jobName,
             craftCost = craftCost,
             marketPrice = marketPrice,
             grossMargin = grossMargin,

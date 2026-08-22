@@ -604,6 +604,8 @@ enum class Tr(
         "This many of the monster's possible drops have no captured price yet, so expected value above is a floor, not a guarantee.",
         "Ce nombre de butins possibles du monstre n'a pas encore de prix capturé, la valeur attendue ci-dessus est donc un minimum, pas une garantie."
     ),
+    DROPS_TITLE("Possible drops", "Butins possibles"),
+    DROP_RATE_QUANTITY_PRICE("%.1f%% × %d — %s", "%.1f%% × %d — %s"),
 
     // Market screen
     MARKET_TAB_PRICES("Prices", "Prix"),
@@ -696,6 +698,7 @@ enum class Tr(
     INGREDIENTS_TITLE("Ingredients", "Ingrédients"),
     INGREDIENT_QUANTITY_SUBTOTAL("× %d — %s", "× %d — %s"),
     NO_PRICE_SHORT("no price", "aucun prix"),
+    CRAFT_JOB_LABEL("Profession: %s", "Métier : %s"),
 
     // Item category filters + CSV export (Market screen's Prices tab)
     CATEGORY_EQUIPMENT("Equipment", "Équipement"),

@@ -1,6 +1,7 @@
 package me.chosante.marketserver.dto
 
 import kotlinx.serialization.Serializable
+import me.chosante.common.I18nText
 
 @Serializable
 data class IngredientCost(
@@ -13,6 +14,7 @@ data class IngredientCost(
 @Serializable
 data class CraftCostResponse(
     val itemId: Int,
+    val jobName: I18nText,
     val craftCost: Long? = null,
     val marketPrice: Long? = null,
     val grossMargin: Long? = null,

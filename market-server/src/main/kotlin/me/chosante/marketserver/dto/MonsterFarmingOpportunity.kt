@@ -13,7 +13,8 @@ import me.chosante.common.Monster
  * all (`MonsterDropCatalog` now includes every monster, not just ones with drops -- see its doc
  * comment), not that every known drop happens to be priced. [Monster] carries no drop list of its
  * own (unlike [HarvestOpportunity.node]), so this field is the only way the GUI can tell those two
- * apart.
+ * apart. [drops] is that drop table, priced per-row -- the expand-in-place detail behind the
+ * aggregate fields above (see [DropInfo]); its size always equals [totalDropCount].
  */
 @Serializable
 data class MonsterFarmingOpportunity(
@@ -21,4 +22,5 @@ data class MonsterFarmingOpportunity(
     val expectedValue: Long?,
     val missingDropCount: Int,
     val totalDropCount: Int,
+    val drops: List<DropInfo> = emptyList(),
 )

@@ -2,6 +2,7 @@ package me.chosante.ui.kamas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.chosante.marketclient.CraftCostResponse
+import me.chosante.marketclient.DropInfo
 import me.chosante.marketclient.HarvestOpportunity
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.MonsterFarmingOpportunity
@@ -73,8 +78,8 @@ fun KamasScreen(
         Box(modifier = Modifier.fillMaxSize().padding(WDimens.pad)) {
             when (ui.kamasTab) {
                 KamasTab.CRAFTING -> CraftingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetCraftPage)
-                KamasTab.HARVESTING -> HarvestingTab(ui = ui, onSetPage = onSetHarvestPage)
-                KamasTab.MONSTER_FARMING -> MonsterFarmingTab(ui = ui, onSetPage = onSetMonsterPage)
+                KamasTab.HARVESTING -> HarvestingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetHarvestPage)
+                KamasTab.MONSTER_FARMING -> MonsterFarmingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetMonsterPage)
             }
         }
     }
@@ -171,13 +176,13 @@ private fun CraftOpportunityRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        ItemBadge(
-            itemId = opportunity.itemId,
-            item = item,
-            lang = lang,
-            onRequestItemInfo = onRequestItemInfo,
-            modifier = Modifier.widthIn(min = 220.dp)
-        )
+        Column(modifier = Modifier.widthIn(min = 220.dp)) {
+            ItemBadge(itemId = opportunity.itemId, item = item, lang = lang, onRequestItemInfo = onRequestItemInfo)
+            Text(
+                text = tr(Tr.CRAFT_JOB_LABEL).format(opportunity.jobName.localized(lang)),
+                style = WTypography.labelSmall.copy(color = WColor.muted)
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             StatLine(
                 tr(Tr.ROI_LABEL),
@@ -204,6 +209,7 @@ private fun CraftOpportunityRow(
 @Composable
 private fun HarvestingTab(
     ui: UiState,
+    onRequestItemInfo: (Int) -> Unit,
     onSetPage: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -224,7 +230,12 @@ private fun HarvestingTab(
             ui.harvestOpportunities.isNotEmpty() ->
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(pagedResults, key = { it.node.resourceId }) { opportunity ->
-                        HarvestOpportunityRow(opportunity = opportunity, lang = ui.lang)
+                        HarvestOpportunityRow(
+                            opportunity = opportunity,
+                            itemInfo = ui.itemInfoCache,
+                            lang = ui.lang,
+                            onRequestItemInfo = onRequestItemInfo
+                        )
                     }
                 }
 
@@ -240,47 +251,102 @@ private fun HarvestingTab(
 @Composable
 private fun HarvestOpportunityRow(
     opportunity: HarvestOpportunity,
+    itemInfo: Map<Int, ItemInfoResponse>,
     lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
 ) {
     val node = opportunity.node
-    Row(
+    var expanded by remember { mutableStateOf(false) }
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(9.dp))
                 .background(WColor.surface)
-                .border(1.dp, WColor.hairline, RoundedCornerShape(9.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .border(1.dp, if (expanded) WColor.accent else WColor.hairline, RoundedCornerShape(9.dp))
     ) {
-        ItemThumbnail(iconKey = node.iconKey, size = 32.dp)
-        Column(modifier = Modifier.widthIn(min = 220.dp)) {
-            Text(text = node.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                text = tr(Tr.KAMAS_NODE_CATEGORY_SKILL).format(node.category, node.skillLevelRequired),
-                style = WTypography.labelSmall.copy(color = WColor.muted)
-            )
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = node.drops.isNotEmpty()) { expanded = !expanded }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ItemThumbnail(iconKey = node.iconKey, size = 32.dp)
+            Column(modifier = Modifier.widthIn(min = 220.dp)) {
+                Text(text = node.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = tr(Tr.KAMAS_NODE_CATEGORY_SKILL).format(node.category, node.skillLevelRequired),
+                    style = WTypography.labelSmall.copy(color = WColor.muted)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                StatLine(
+                    tr(Tr.EXPECTED_VALUE_LABEL),
+                    opportunity.expectedValue?.toString() ?: "—",
+                    hint = tr(Tr.KAMAS_HARVEST_EXPECTED_VALUE_HINT)
+                )
+                val pricedDrops = node.drops.size - opportunity.missingDropCount
+                StatLine(
+                    tr(Tr.PRICED_DROPS_LABEL),
+                    "$pricedDrops / ${node.drops.size}",
+                    hint = tr(Tr.PRICED_DROPS_HINT)
+                )
+            }
+            if (node.drops.isNotEmpty()) {
+                Text(text = if (expanded) "▲" else "▼", style = WTypography.labelMedium.copy(color = WColor.muted))
+            }
         }
-        Column(modifier = Modifier.weight(1f)) {
-            StatLine(
-                tr(Tr.EXPECTED_VALUE_LABEL),
-                opportunity.expectedValue?.toString() ?: "—",
-                hint = tr(Tr.KAMAS_HARVEST_EXPECTED_VALUE_HINT)
-            )
-            val pricedDrops = node.drops.size - opportunity.missingDropCount
-            StatLine(
-                tr(Tr.PRICED_DROPS_LABEL),
-                "$pricedDrops / ${node.drops.size}",
-                hint = tr(Tr.PRICED_DROPS_HINT)
-            )
+        if (expanded) {
+            Hairline()
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = tr(Tr.DROPS_TITLE), style = WTypography.titleMedium)
+                opportunity.drops.forEach { drop ->
+                    DropRow(drop = drop, itemInfo = itemInfo, lang = lang, onRequestItemInfo = onRequestItemInfo)
+                }
+            }
         }
+    }
+}
+
+/** One drop-table row inside an expanded [HarvestOpportunityRow]/[MonsterFarmingRow]. */
+@Composable
+private fun DropRow(
+    drop: DropInfo,
+    itemInfo: Map<Int, ItemInfoResponse>,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ItemBadge(
+            itemId = drop.itemId,
+            item = itemInfo[drop.itemId],
+            lang = lang,
+            onRequestItemInfo = onRequestItemInfo,
+            modifier = Modifier.widthIn(min = 200.dp)
+        )
+        Text(
+            text =
+                tr(Tr.DROP_RATE_QUANTITY_PRICE).format(
+                    drop.dropRate * 100,
+                    drop.quantity,
+                    drop.unitPrice?.toString() ?: tr(Tr.NO_PRICE_SHORT)
+                ),
+            style = WTypography.bodySmall.copy(color = WColor.muted)
+        )
     }
 }
 
 @Composable
 private fun MonsterFarmingTab(
     ui: UiState,
+    onRequestItemInfo: (Int) -> Unit,
     onSetPage: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -304,7 +370,12 @@ private fun MonsterFarmingTab(
             ui.monsterFarmingOpportunities.isNotEmpty() ->
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(pagedResults, key = { it.monster.id }) { opportunity ->
-                        MonsterFarmingRow(opportunity = opportunity, lang = ui.lang)
+                        MonsterFarmingRow(
+                            opportunity = opportunity,
+                            itemInfo = ui.itemInfoCache,
+                            lang = ui.lang,
+                            onRequestItemInfo = onRequestItemInfo
+                        )
                     }
                 }
 
@@ -320,48 +391,70 @@ private fun MonsterFarmingTab(
 @Composable
 private fun MonsterFarmingRow(
     opportunity: MonsterFarmingOpportunity,
+    itemInfo: Map<Int, ItemInfoResponse>,
     lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
 ) {
     val monster = opportunity.monster
-    Row(
+    var expanded by remember { mutableStateOf(false) }
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(9.dp))
                 .background(WColor.surface)
-                .border(1.dp, WColor.hairline, RoundedCornerShape(9.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .border(1.dp, if (expanded) WColor.accent else WColor.hairline, RoundedCornerShape(9.dp))
     ) {
-        MonsterIcon(monster = monster, size = 32.dp)
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = monster.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                text =
-                    listOfNotNull(
-                        monster.family?.localized(lang),
-                        tr(Tr.KAMAS_MONSTER_LEVEL).format(monster.level),
-                        tr(Tr.MONSTER_HP_SHORT).format(monster.hp)
-                    ).joinToString(" · "),
-                style = WTypography.labelSmall.copy(color = WColor.muted)
-            )
-            BossResistanceChips(boss = monster)
-        }
-        Column(modifier = Modifier.widthIn(min = 180.dp)) {
-            StatLine(
-                tr(Tr.EXPECTED_VALUE_LABEL),
-                opportunity.expectedValue?.toString() ?: "—",
-                hint = tr(Tr.KAMAS_MONSTER_EXPECTED_VALUE_HINT)
-            )
-            if (opportunity.totalDropCount == 0) {
-                Text(text = tr(Tr.NO_KNOWN_DROPS), style = WTypography.labelSmall.copy(color = WColor.faint))
-            } else if (opportunity.missingDropCount > 0) {
-                StatLine(
-                    tr(Tr.UNPRICED_DROPS_LABEL),
-                    opportunity.missingDropCount.toString(),
-                    hint = tr(Tr.UNPRICED_DROPS_HINT)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = opportunity.drops.isNotEmpty()) { expanded = !expanded }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MonsterIcon(monster = monster, size = 32.dp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = monster.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text =
+                        listOfNotNull(
+                            monster.family?.localized(lang),
+                            tr(Tr.KAMAS_MONSTER_LEVEL).format(monster.level),
+                            tr(Tr.MONSTER_HP_SHORT).format(monster.hp)
+                        ).joinToString(" · "),
+                    style = WTypography.labelSmall.copy(color = WColor.muted)
                 )
+                BossResistanceChips(boss = monster)
+            }
+            Column(modifier = Modifier.widthIn(min = 180.dp)) {
+                StatLine(
+                    tr(Tr.EXPECTED_VALUE_LABEL),
+                    opportunity.expectedValue?.toString() ?: "—",
+                    hint = tr(Tr.KAMAS_MONSTER_EXPECTED_VALUE_HINT)
+                )
+                if (opportunity.totalDropCount == 0) {
+                    Text(text = tr(Tr.NO_KNOWN_DROPS), style = WTypography.labelSmall.copy(color = WColor.faint))
+                } else if (opportunity.missingDropCount > 0) {
+                    StatLine(
+                        tr(Tr.UNPRICED_DROPS_LABEL),
+                        opportunity.missingDropCount.toString(),
+                        hint = tr(Tr.UNPRICED_DROPS_HINT)
+                    )
+                }
+            }
+            if (opportunity.drops.isNotEmpty()) {
+                Text(text = if (expanded) "▲" else "▼", style = WTypography.labelMedium.copy(color = WColor.muted))
+            }
+        }
+        if (expanded) {
+            Hairline()
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = tr(Tr.DROPS_TITLE), style = WTypography.titleMedium)
+                opportunity.drops.forEach { drop ->
+                    DropRow(drop = drop, itemInfo = itemInfo, lang = lang, onRequestItemInfo = onRequestItemInfo)
+                }
             }
         }
     }

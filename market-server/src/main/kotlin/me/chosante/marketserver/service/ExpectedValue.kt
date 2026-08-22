@@ -1,6 +1,7 @@
 package me.chosante.marketserver.service
 
 import me.chosante.common.HarvestDrop
+import me.chosante.marketserver.dto.DropInfo
 import me.chosante.marketserver.dto.ObservationResponse
 
 /**
@@ -30,3 +31,12 @@ internal fun expectedDropValue(
         }
     return ExpectedValue(value = value, missingDropCount = unpricedDrops.size)
 }
+
+/** Per-drop breakdown behind [expectedDropValue]'s aggregate -- the expand-in-place drop list. */
+internal fun toDropInfos(
+    drops: List<HarvestDrop>,
+    prices: Map<Int, ObservationResponse>,
+): List<DropInfo> =
+    drops.map { drop ->
+        DropInfo(itemId = drop.itemId, dropRate = drop.dropRate, quantity = drop.quantity, unitPrice = prices[drop.itemId]?.minPrice)
+    }

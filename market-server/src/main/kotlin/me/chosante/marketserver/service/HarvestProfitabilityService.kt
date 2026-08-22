@@ -25,7 +25,12 @@ object HarvestProfitabilityService {
             .sortedWith(compareByDescending { it.second.value ?: -1L })
             .take(limit)
             .map { (node, expected) ->
-                HarvestOpportunity(node = node, expectedValue = expected.value, missingDropCount = expected.missingDropCount)
+                HarvestOpportunity(
+                    node = node,
+                    expectedValue = expected.value,
+                    missingDropCount = expected.missingDropCount,
+                    drops = toDropInfos(node.drops, prices)
+                )
             }.toList()
     }
 }

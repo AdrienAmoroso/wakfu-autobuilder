@@ -52,6 +52,7 @@ import me.chosante.ui.components.SmallButton
 import me.chosante.ui.components.SmallTextField
 import me.chosante.ui.components.StatLine
 import me.chosante.ui.components.TabButton
+import me.chosante.ui.components.localized
 import me.chosante.ui.components.pageCount
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.Tr
@@ -714,6 +715,8 @@ private fun CraftCostResultCard(
                 .padding(16.dp)
     ) {
         ItemBadge(itemId = result.itemId, item = itemInfo[result.itemId], lang = lang, onRequestItemInfo = onRequestItemInfo)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = tr(Tr.CRAFT_JOB_LABEL).format(result.jobName.localized(lang)), style = WTypography.labelSmall.copy(color = WColor.muted))
         Spacer(modifier = Modifier.height(10.dp))
         val decisionColor =
             when (result.decision) {

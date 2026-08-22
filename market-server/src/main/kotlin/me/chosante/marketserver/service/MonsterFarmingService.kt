@@ -26,15 +26,16 @@ object MonsterFarmingService {
 
         return entries
             .asSequence()
-            .map { (monster, loot) -> Triple(monster, loot.drops.size, expectedDropValue(loot.drops, prices)) }
+            .map { (monster, loot) -> Triple(monster, loot.drops, expectedDropValue(loot.drops, prices)) }
             .sortedWith(compareByDescending { it.third.value ?: -1L })
             .take(limit)
-            .map { (monster, totalDropCount, expected) ->
+            .map { (monster, drops, expected) ->
                 MonsterFarmingOpportunity(
                     monster = monster,
                     expectedValue = expected.value,
                     missingDropCount = expected.missingDropCount,
-                    totalDropCount = totalDropCount
+                    totalDropCount = drops.size,
+                    drops = toDropInfos(drops, prices)
                 )
             }.toList()
     }
