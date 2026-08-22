@@ -207,8 +207,8 @@ class MarketRepository(
         }
 
     /**
-     * HDV-style browse: search the item catalog by name/level range/rarity, each hit carrying its
-     * latest known price. Throws on failure like [listObservations] -- unlike [getItem]'s
+     * HDV-style browse: search the item catalog by name/level range/rarity/category, each hit
+     * carrying its latest known price. Throws on failure like [listObservations] -- unlike [getItem]'s
      * best-effort enrichment, this list IS the Prices tab's primary content, so the caller must be
      * able to tell "no results" (empty list) apart from "couldn't reach market-server" (exception).
      */
@@ -217,6 +217,7 @@ class MarketRepository(
         minLevel: Int? = null,
         maxLevel: Int? = null,
         rarities: Set<Rarity> = emptySet(),
+        categories: Set<String> = emptySet(),
         limit: Int? = null,
     ): List<ItemSearchResult> =
         withContext(ioDispatcher) {
@@ -226,6 +227,7 @@ class MarketRepository(
                     minLevel?.let { add("minLevel" to it) }
                     maxLevel?.let { add("maxLevel" to it) }
                     if (rarities.isNotEmpty()) add("rarity" to rarities.joinToString(",") { it.name })
+                    if (categories.isNotEmpty()) add("category" to categories.joinToString(","))
                     limit?.let { add("limit" to it) }
                 }
             val (_, _, result) =

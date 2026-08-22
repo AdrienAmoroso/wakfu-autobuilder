@@ -43,10 +43,13 @@ import me.chosante.common.history.HistoryEntry
 import me.chosante.createZenithBuild
 import me.chosante.marketclient.CreateObservationRequest
 import me.chosante.marketclient.FlagMotif
+import me.chosante.marketclient.ItemSearchResult
 import me.chosante.marketclient.MarketRepository
 import me.chosante.marketclient.UpdatePricesRequest
 import me.chosante.ui.components.BreedAssets
 import me.chosante.ui.components.IconPreloader
+import me.chosante.ui.components.promptSaveCsvFile
+import me.chosante.ui.components.toCsv
 import me.chosante.ui.components.warmUpPaths
 import me.chosante.ui.history.HistoryRepository
 import me.chosante.ui.history.historyJson
@@ -62,10 +65,13 @@ import me.chosante.ui.history.toHistoryEntry
 import me.chosante.ui.history.toTargetRows
 import me.chosante.ui.i18n.Tr
 import java.awt.Desktop
+import java.awt.Frame
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.net.URI
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.CancellationException
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.milliseconds
@@ -115,6 +121,30 @@ internal fun expandGlobalResistance(targets: List<TargetStat>): List<TargetStat>
     } + perElement
 }
 
+// Comfortably covers the ~9,364-item catalog, so a CSV export always contains every item matching
+// the active filters, not just a truncated slice -- matches market-server's own MAX_SEARCH_LIMIT.
+private const val ITEM_EXPORT_LIMIT = 10_000
+
+private fun itemsToCsv(results: List<ItemSearchResult>): String {
+    val headers = listOf("item_id", "name_fr", "name_en", "level", "rarity", "category", "min_price", "avg_price", "server", "observed_at")
+    val rows =
+        results.map { result ->
+            listOf(
+                result.item.itemId.toString(),
+                result.item.name.fr,
+                result.item.name.en,
+                result.item.level.toString(),
+                result.item.rarity.name,
+                result.item.category,
+                result.latestMinPrice?.toString() ?: "",
+                result.latestAvgPrice?.toString() ?: "",
+                result.latestServer ?: "",
+                result.latestObservedAt ?: ""
+            )
+        }
+    return toCsv(headers, rows)
+}
+
 class BuildSearchModel(
     private val scope: CoroutineScope,
     private val buildFinder: BuildFinder = { WakfuBestBuildFinderAlgorithm.run(it) },
@@ -162,6 +192,15 @@ class BuildSearchModel(
      * usage (tests) can never hang on it.
      */
     val windowShown: kotlinx.coroutines.CompletableDeferred<Unit> = kotlinx.coroutines.CompletableDeferred()
+
+    // The real app window, handed over once it exists (unlike windowShown above, a CSV export's
+    // Save dialog only needs the reference itself, not a "has it appeared yet" signal -- it's only
+    // ever used from a button click, long after the window is showing).
+    private var ownerWindow: Frame? = null
+
+    fun attachWindow(window: Frame) {
+        ownerWindow = window
+    }
 
     /** Estimated warm-up progress (0..1) for the loading screen. See [WarmupTiming]. */
     var warmupProgress by androidx.compose.runtime.mutableStateOf(0f)
@@ -1334,6 +1373,14 @@ class BuildSearchModel(
         scheduleMarketSearch()
     }
 
+    fun toggleMarketCategoryFilter(category: String) {
+        ui =
+            ui.copy(
+                marketCategoryFilter = if (category in ui.marketCategoryFilter) ui.marketCategoryFilter - category else ui.marketCategoryFilter + category
+            )
+        scheduleMarketSearch()
+    }
+
     /** Debounced (300ms) live search triggered by every filter edit above. */
     private fun scheduleMarketSearch() {
         marketSearchJob?.cancel()
@@ -1358,12 +1405,49 @@ class BuildSearchModel(
                     name = ui.marketSearchQuery.trim().ifBlank { null },
                     minLevel = ui.marketMinLevel.toIntOrNull(),
                     maxLevel = ui.marketMaxLevel.toIntOrNull(),
-                    rarities = ui.marketRarityFilter
+                    rarities = ui.marketRarityFilter,
+                    categories = ui.marketCategoryFilter
                 )
             withContext(mainDispatcher) { ui = ui.copy(marketSearchResults = results, marketSearchState = MarketState.Ready) }
         } catch (exception: Exception) {
             withContext(mainDispatcher) {
                 ui = ui.copy(marketSearchState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
+            }
+        }
+    }
+
+    /**
+     * Exports every item matching the Prices tab's *current* filters (name/level/rarity/category)
+     * as CSV -- not just whatever page is on screen, so the export always matches what the filters
+     * describe. A fresh, uncapped-in-practice search (see [ITEM_EXPORT_LIMIT]) rather than reusing
+     * [UiState.marketSearchResults], which may be a smaller default-view slice.
+     */
+    fun exportItemsToCsv() {
+        scope.launch(Dispatchers.Default) {
+            val results =
+                try {
+                    marketRepository.searchItems(
+                        name = ui.marketSearchQuery.trim().ifBlank { null },
+                        minLevel = ui.marketMinLevel.toIntOrNull(),
+                        maxLevel = ui.marketMaxLevel.toIntOrNull(),
+                        rarities = ui.marketRarityFilter,
+                        categories = ui.marketCategoryFilter,
+                        limit = ITEM_EXPORT_LIMIT
+                    )
+                } catch (exception: Exception) {
+                    withContext(mainDispatcher) {
+                        ui = ui.copy(error = exception.message ?: "Could not reach market-server")
+                    }
+                    return@launch
+                }
+            val csv = itemsToCsv(results)
+            withContext(mainDispatcher) {
+                val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                val file = promptSaveCsvFile(ownerWindow, suggestedFileName = "wakfu-items-$timestamp.csv")
+                if (file != null) {
+                    file.writeText(csv, Charsets.UTF_8)
+                    ui = ui.copy(toast = Tr.TOAST_ITEMS_EXPORTED.value(ui.lang))
+                }
             }
         }
     }

@@ -91,6 +91,12 @@ class EncyclopediaClient(
         destination: File,
     ): Boolean {
         if (destination.isFile && destination.length() > 0) return true
+        // Some hosted URLs (e.g. monster portraits) contain literal "../" segments -- curl silently
+        // resolves those client-side before sending, but java.net.http.HttpClient does not, and
+        // Ankama's edge rejects the raw traversal with a 403 (confirmed against a real fetch: same
+        // URL 200s with the path resolved, 403s sent as-is). Normalize before requesting so both
+        // kinds of URL work identically.
+        val normalizedUrl = URI.create(url).normalize()
         var attempt = 0
         var backoff = 500L
         while (attempt < maxAttempts) {
@@ -100,7 +106,7 @@ class EncyclopediaClient(
                 val request =
                     HttpRequest
                         .newBuilder()
-                        .uri(URI.create(url))
+                        .uri(normalizedUrl)
                         .header("User-Agent", USER_AGENT)
                         .timeout(Duration.ofSeconds(20))
                         .GET()

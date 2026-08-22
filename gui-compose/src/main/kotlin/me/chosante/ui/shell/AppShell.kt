@@ -169,7 +169,9 @@ fun AppShell(
                                 onMinLevelChange = model::setMarketMinLevel,
                                 onMaxLevelChange = model::setMarketMaxLevel,
                                 onToggleRarityFilter = model::toggleMarketRarityFilter,
-                                onToggleExpandedItem = model::toggleExpandedMarketItem
+                                onToggleCategoryFilter = model::toggleMarketCategoryFilter,
+                                onToggleExpandedItem = model::toggleExpandedMarketItem,
+                                onExportCsv = model::exportItemsToCsv
                             )
 
                         Screen.Kamas ->

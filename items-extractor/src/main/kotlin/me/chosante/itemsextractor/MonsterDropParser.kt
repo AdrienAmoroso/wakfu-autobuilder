@@ -40,7 +40,12 @@ object MonsterDropParser {
     // (or a generous fallback window if this is the page's last section) -- the encyclopedia's
     // sections aren't cleanly delimited any other way via regex.
     private val dropItemIdRegex = Regex("""linker_item_(\d+)""")
-    private val dropPercentRegex = Regex("""<span>\s*(\d+)%""")
+
+    // Rate is NOT always a whole number -- confirmed against a real page (monsterId 2016, "Lanco
+    // Plumo" at "0.8%"): rare equipment drops commonly use a decimal rate. An integer-only `(\d+)%`
+    // silently dropped every such entry (an undercount, not a crash -- exactly the class of silent
+    // data loss this crawler's honesty discipline exists to avoid).
+    private val dropPercentRegex = Regex("""<span>\s*(\d+(?:\.\d+)?)%""")
 
     /**
      * (itemId, dropRate 0-1) pairs from a monster detail page's drops section, empty if it drops
@@ -67,7 +72,7 @@ object MonsterDropParser {
                     .find(chunk)
                     ?.groupValues
                     ?.get(1)
-                    ?.toIntOrNull() ?: return@mapNotNull null
+                    ?.toDoubleOrNull() ?: return@mapNotNull null
             itemId to (percent / 100.0)
         }
     }

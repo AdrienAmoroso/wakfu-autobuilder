@@ -3,6 +3,7 @@ package me.chosante.marketserver.equipment
 import kotlinx.serialization.json.Json
 import me.chosante.common.Equipment
 import me.chosante.common.ItemSummary
+import me.chosante.common.ItemType
 import me.chosante.common.Rarity
 import me.chosante.marketserver.dto.ItemInfoResponse
 
@@ -48,6 +49,7 @@ object ItemCatalog {
         minLevel: Int?,
         maxLevel: Int?,
         rarities: Set<Rarity>?,
+        categories: Set<String>?,
         limit: Int,
     ): List<ItemInfoResponse> =
         all
@@ -56,13 +58,27 @@ object ItemCatalog {
             .filter { minLevel == null || it.level >= minLevel }
             .filter { maxLevel == null || it.level <= maxLevel }
             .filter { rarities.isNullOrEmpty() || it.rarity in rarities }
+            .filter { categories.isNullOrEmpty() || it.category in categories }
             .sortedWith(compareBy({ it.level }, { it.name.fr }))
             .take(limit)
             .toList()
 }
 
+// "creature" (Familiers/Montures) is split out from "equipment" here -- the HDV's own top-level
+// category filter treats them separately even though they're equip-slot items sourced from the same
+// CDN feed as gear.
+private val CREATURE_ITEM_TYPES = setOf(ItemType.PETS, ItemType.MOUNTS)
+
 private fun Equipment.toItemInfoResponse() =
-    ItemInfoResponse(itemId = equipmentId, name = name, level = level, rarity = rarity, iconKey = guiId, category = "equipment", isEquipment = true)
+    ItemInfoResponse(
+        itemId = equipmentId,
+        name = name,
+        level = level,
+        rarity = rarity,
+        iconKey = guiId,
+        category = if (itemType in CREATURE_ITEM_TYPES) "creature" else "equipment",
+        isEquipment = true
+    )
 
 private fun ItemSummary.toItemInfoResponse() =
     ItemInfoResponse(itemId = itemId, name = name, level = level, rarity = rarity, iconKey = iconKey, category = category, isEquipment = false)

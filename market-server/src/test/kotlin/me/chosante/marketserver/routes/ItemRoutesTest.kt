@@ -52,6 +52,18 @@ class ItemRoutesTest {
         }
 
     @Test
+    fun `search filters by category`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            val matching = client.get("/api/items/search?name=Gobball+Amulet&category=equipment")
+            val wrongCategory = client.get("/api/items/search?name=Gobball+Amulet&category=creature")
+
+            assertThat(matching.bodyAsText()).contains("\"itemId\":2021")
+            assertThat(wrongCategory.bodyAsText()).doesNotContain("\"itemId\":2021")
+        }
+
+    @Test
     fun `search with no filters returns recently observed items, not an arbitrary catalog slice`() =
         testApplication {
             application { module(dbPath = tempDbPath()) }

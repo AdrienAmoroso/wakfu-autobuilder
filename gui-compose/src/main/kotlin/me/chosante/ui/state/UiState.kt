@@ -355,14 +355,18 @@ data class UiState(
     val marketTab: MarketTab = MarketTab.PRICES,
     /**
      * HDV-style browse, mirroring the in-game auction house's own search: free-text name +
-     * level range + rarity filter over the full item catalog (equipment + resources/consumables),
-     * each hit carrying its latest known price. This is the Prices tab's primary view. All
-     * in-memory only (reset each launch), matching [marketItemIdFilter]'s existing precedent.
+     * level range + rarity + category filter over the full item catalog (equipment + resources/
+     * consumables/cosmetics/misc), each hit carrying its latest known price. This is the Prices
+     * tab's primary view. All in-memory only (reset each launch), matching [marketItemIdFilter]'s
+     * existing precedent.
      */
     val marketSearchQuery: String = "",
     val marketMinLevel: String = "",
     val marketMaxLevel: String = "",
     val marketRarityFilter: Set<Rarity> = emptySet(),
+    /** Raw category strings from [ItemInfoResponse.category] (equipment/creature/resource/
+     * consumable/customization/miscellaneous) -- the HDV-style top category filter chips. */
+    val marketCategoryFilter: Set<String> = emptySet(),
     val marketSearchResults: List<ItemSearchResult> = emptyList(),
     val marketSearchState: MarketState = MarketState.Idle,
     /** The item currently expanded in [marketSearchResults], showing its full price-observation

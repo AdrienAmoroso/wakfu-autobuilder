@@ -63,8 +63,10 @@ class MonsterFarmingRoutesTest {
             val blackGobbly = results.first { it.monster.id == BLACK_GOBBLY_ID }
             // 0.25 * 1 * 1000 = 250.
             assertThat(blackGobbly.expectedValue).isEqualTo(250L)
-            // Black Gobbly drops 5 items total; only Gobball Skin has a captured price here.
-            assertThat(blackGobbly.missingDropCount).isEqualTo(4)
+            // Black Gobbly drops 8 items total (including 3 fractional-rate drops, e.g. 0.8% --
+            // confirmed against the real committed monster-drops.json); only Gobball Skin has a
+            // captured price here.
+            assertThat(blackGobbly.missingDropCount).isEqualTo(7)
         }
 
     @Test

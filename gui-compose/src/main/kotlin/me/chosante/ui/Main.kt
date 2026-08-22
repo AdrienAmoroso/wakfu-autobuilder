@@ -86,6 +86,11 @@ fun main() {
             icon = appIcon,
             state = windowState
         ) {
+            // Hand the model the real window once it exists (it's constructed before this Window{}
+            // block runs) -- needed only for the CSV export's native Save dialog, see
+            // BuildSearchModel.attachWindow.
+            model.attachWindow(window)
+
             // Pull the window to the front as soon as it is shown: launched via `gradle run` (an
             // un-bundled JVM) the window can open *behind* the launching app, hiding the loading
             // screen so the warm-up progress isn't visible. Best-effort: a window-ordering hint must

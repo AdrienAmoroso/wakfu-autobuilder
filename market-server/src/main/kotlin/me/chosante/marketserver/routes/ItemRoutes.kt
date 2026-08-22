@@ -11,7 +11,11 @@ import me.chosante.marketserver.service.PriceObservationService
 import org.jetbrains.exposed.v1.jdbc.Database
 
 private const val DEFAULT_SEARCH_LIMIT = 50
-private const val MAX_SEARCH_LIMIT = 200
+
+// Raised well past the old 200 -- the CSV-export flow (Market screen) intentionally requests up to
+// this many rows in one call so an export always matches its filters exactly, not just one page.
+// Safe here: a local server for a single desktop user, not a public API.
+private const val MAX_SEARCH_LIMIT = 10_000
 
 fun Route.itemRoutes(database: Database) {
     get("/api/items/{id}") {
@@ -26,9 +30,11 @@ fun Route.itemRoutes(database: Database) {
         }
     }
 
-    // HDV-style browse: search the item catalog (equipment + resources/consumables) by name/level/
-    // rarity, embedding each hit's latest known price so the Market screen's Prices tab can render
-    // a full "browse the auction house" list without a follow-up request per row.
+    // HDV-style browse: search the item catalog (equipment + resources/consumables/cosmetics/misc)
+    // by name/level/rarity/category, embedding each hit's latest known price so the Market screen's
+    // Prices tab can render a full "browse the auction house" list without a follow-up request per
+    // row. `category` is one of ItemInfoResponse's raw category strings (equipment/creature/
+    // resource/consumable/customization/miscellaneous), comma-separated for multiple.
     get("/api/items/search") {
         val params = call.request.queryParameters
         val name = params["name"]?.trim()?.ifBlank { null }
@@ -39,13 +45,14 @@ fun Route.itemRoutes(database: Database) {
                 ?.split(",")
                 ?.mapNotNull { token -> runCatching { Rarity.valueOf(token.trim().uppercase()) }.getOrNull() }
                 ?.toSet()
+        val categories = params["category"]?.split(",")?.mapNotNull { it.trim().ifBlank { null } }?.toSet()
         val limit = minOf(params["limit"]?.toIntOrNull() ?: DEFAULT_SEARCH_LIMIT, MAX_SEARCH_LIMIT)
 
         // No filter at all = the tab's default view on opening the Market screen: show what's
         // actually been captured (most recent first), like walking into the HDV and seeing what's
         // listed, rather than an arbitrary slice of the ~10k-item catalog sorted by level.
         val items =
-            if (name == null && minLevel == null && maxLevel == null && rarities.isNullOrEmpty()) {
+            if (name == null && minLevel == null && maxLevel == null && rarities.isNullOrEmpty() && categories.isNullOrEmpty()) {
                 // Over-fetch candidate ids: some recently-observed items may fall outside
                 // items-extractor's coverage (see ItemCatalog's doc comment) and resolve to nothing,
                 // so fetching exactly `limit` ids up front could silently return fewer than `limit`
@@ -57,7 +64,7 @@ fun Route.itemRoutes(database: Database) {
                     .take(limit)
                     .toList()
             } else {
-                ItemCatalog.search(name, minLevel, maxLevel, rarities, limit)
+                ItemCatalog.search(name, minLevel, maxLevel, rarities, categories, limit)
             }
         val latestByItemId = PriceObservationService.latestForItems(database, items.map { it.itemId })
         val results =

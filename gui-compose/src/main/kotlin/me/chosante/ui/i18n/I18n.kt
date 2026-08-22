@@ -518,6 +518,191 @@ enum class Tr(
     ELEMENT_WATER("Water", "Eau"),
     ELEMENT_EARTH("Earth", "Terre"),
     ELEMENT_AIR("Air", "Air"),
+
+    // Market & Kamas screens -- shared craft-cost vocabulary
+    CANT_REACH_MARKET_SERVER("Can't reach market-server", "Impossible de joindre market-server"),
+    START_MARKET_SERVER_HINT("Start it with ./gradlew :market-server:run", "Démarre-le avec ./gradlew :market-server:run"),
+    ROI_LABEL("ROI", "ROI"),
+    ROI_HINT(
+        "Net margin divided by craft cost -- how much you gain relative to what you spent.",
+        "Marge nette divisée par le coût de fabrication -- ce que tu gagnes par rapport à ce que tu as dépensé."
+    ),
+    NET_MARGIN("Net margin", "Marge nette"),
+    NET_MARGIN_HINT(
+        "Gross margin after the HDV sales tax -- what you'd actually pocket from selling.",
+        "Marge brute après la taxe de vente de l'HDV -- ce que tu empocherais réellement en vendant."
+    ),
+    CRAFT_COST_LABEL("Craft cost", "Coût de fabrication"),
+    CRAFT_COST_HINT(
+        "Sum of every ingredient's quantity times its latest captured HDV price.",
+        "Somme de la quantité de chaque ingrédient multipliée par son dernier prix HDV capturé."
+    ),
+    MARKET_PRICE_LABEL("Market price", "Prix du marché"),
+    CRAFT_DECISION_HINT(
+        "CRAFT: crafting beats buying by more than 5% ROI. BUY: not worth crafting at current prices.",
+        "FABRIQUER : fabriquer rapporte plus de 5% de ROI que d'acheter. ACHETER : pas rentable à fabriquer aux prix actuels."
+    ),
+    CRAFT_DECISION_CRAFT("CRAFT", "FABRIQUER"),
+    CRAFT_DECISION_BUY("BUY", "ACHETER"),
+    CRAFT_DECISION_INSUFFICIENT("INSUFFICIENT DATA", "DONNÉES INSUFFISANTES"),
+
+    // Kamas screen
+    KAMAS_TAB_CRAFTING("Crafting", "Artisanat"),
+    KAMAS_TAB_HARVESTING("Harvesting", "Récolte"),
+    KAMAS_TAB_MONSTER_FARMING("Monster Farming", "Chasse aux monstres"),
+    KAMAS_CRAFTING_SUBTITLE(
+        "Recipes worth crafting and reselling, best ROI first",
+        "Recettes rentables à fabriquer et revendre, meilleur ROI en premier"
+    ),
+    KAMAS_SCANNING_RECIPES("Scanning recipes…", "Analyse des recettes…"),
+    KAMAS_NO_CRAFTS_TITLE("No profitable crafts found yet", "Aucune fabrication rentable trouvée pour l'instant"),
+    KAMAS_NO_CRAFTS_HINT(
+        "This needs both a recipe's ingredients AND its crafted result to have a captured price. Capture more HDV prices and check back.",
+        "Il faut que les ingrédients ET le résultat de la recette aient un prix capturé. Capture plus de prix HDV et reviens vérifier."
+    ),
+    KAMAS_HARVESTING_SUBTITLE(
+        "Harvest nodes worth farming, best expected value first",
+        "Ressources rentables à récolter, meilleure valeur attendue en premier"
+    ),
+    KAMAS_SCANNING_NODES("Scanning nodes…", "Analyse des ressources…"),
+    KAMAS_NO_HARVEST_TITLE("No harvestable value found yet", "Aucune récolte rentable trouvée pour l'instant"),
+    KAMAS_NO_HARVEST_HINT(
+        "This needs at least one of a node's possible drops to have a captured price. Capture more HDV prices for raw materials and check back.",
+        "Il faut qu'au moins un des butins possibles de la ressource ait un prix capturé. Capture plus de prix HDV pour les matières premières et reviens vérifier."
+    ),
+    KAMAS_NODE_CATEGORY_SKILL("%s · Skill lvl %d+", "%s · Niv. compétence %d+"),
+    KAMAS_MONSTER_FARMING_SUBTITLE(
+        "Monsters worth farming, best expected value per kill first",
+        "Monstres rentables à chasser, meilleure valeur attendue par kill en premier"
+    ),
+    KAMAS_SCANNING_MONSTERS("Scanning monsters…", "Analyse des monstres…"),
+    KAMAS_NO_MONSTER_TITLE("No farmable value found yet", "Aucune chasse rentable trouvée pour l'instant"),
+    KAMAS_NO_MONSTER_HINT(
+        "This needs at least one of a monster's possible drops to have a captured price. Capture more HDV prices and check back.",
+        "Il faut qu'au moins un des butins possibles du monstre ait un prix capturé. Capture plus de prix HDV et reviens vérifier."
+    ),
+    KAMAS_MONSTER_LEVEL("Lvl %d", "Niv %d"),
+    EXPECTED_VALUE_LABEL("Expected value", "Valeur attendue"),
+    KAMAS_HARVEST_EXPECTED_VALUE_HINT(
+        "Σ (drop chance × quantity × latest captured price) across this node's possible drops.",
+        "Σ (chance de butin × quantité × dernier prix capturé) sur tous les butins possibles de cette ressource."
+    ),
+    KAMAS_MONSTER_EXPECTED_VALUE_HINT(
+        "Σ (drop chance × quantity × latest captured price) across this monster's possible drops.",
+        "Σ (chance de butin × quantité × dernier prix capturé) sur tous les butins possibles de ce monstre."
+    ),
+    PRICED_DROPS_LABEL("Priced drops", "Butins avec prix"),
+    PRICED_DROPS_HINT(
+        "How many of this node's possible drops have a captured price. Expected value above only counts these, so it's a floor, not a guarantee.",
+        "Combien des butins possibles de cette ressource ont un prix capturé. La valeur attendue ci-dessus ne compte que ceux-ci, c'est donc un minimum, pas une garantie."
+    ),
+    UNPRICED_DROPS_LABEL("Unpriced drops", "Butins sans prix"),
+    UNPRICED_DROPS_HINT(
+        "This many of the monster's possible drops have no captured price yet, so expected value above is a floor, not a guarantee.",
+        "Ce nombre de butins possibles du monstre n'a pas encore de prix capturé, la valeur attendue ci-dessus est donc un minimum, pas une garantie."
+    ),
+
+    // Market screen
+    MARKET_TAB_PRICES("Prices", "Prix"),
+    MARKET_TAB_CRAFT_COST("Craft Cost", "Coût de fabrication"),
+    MARKET_SEARCH_BY_NAME("Search by name…", "Rechercher par nom…"),
+    MARKET_MIN_LVL("Min lvl", "Niv min"),
+    MARKET_MAX_LVL("Max lvl", "Niv max"),
+    CAPTURE_STOP("Stop Capture", "Arrêter la capture"),
+    CAPTURE_PROCESSING("Processing…", "Traitement…"),
+    CAPTURE_START("Start Capture", "Démarrer la capture"),
+    CAPTURE_CAPTURING_SINCE("Capturing — started %s ago", "Capture en cours — démarrée il y a %s"),
+    CAPTURE_PARSING("Parsing and importing captured prices…", "Analyse et import des prix capturés…"),
+    CAPTURE_ERROR("Error: %s", "Erreur : %s"),
+    CAPTURE_UNKNOWN_ERROR("unknown", "inconnue"),
+    CAPTURE_IDLE_LAST_IMPORT("Idle — last capture imported %d price(s)", "Inactif — dernière capture : %d prix importé(s)"),
+    CAPTURE_IDLE("Idle", "Inactif"),
+    JUST_NOW("just now", "à l'instant"),
+    AGO_MINUTES("%dm ago", "il y a %dm"),
+    AGO_HOURS("%dh ago", "il y a %dh"),
+    AGO_DAYS("%dd ago", "il y a %dj"),
+    NO_PRICE_CAPTURED_YET("No price captured yet", "Aucun prix capturé pour l'instant"),
+    LOWEST_AVERAGE_SUMMARY("Lowest %d · Average %d", "Min %d · Moyenne %d"),
+    PRICE_SUMMARY_INFO(
+        "From the most recent HDV capture for this item: \"Lowest\" is the cheapest listing seen, \"Average\" is the mean of every listing seen in that same capture.",
+        "D'après la capture HDV la plus récente pour cet objet : « Min » est l'annonce la moins chère vue, « Moyenne » est la moyenne de toutes les annonces vues lors de cette capture."
+    ),
+    PRICE_HISTORY_TITLE("Price history", "Historique des prix"),
+    PRICE_HISTORY_INFO(
+        "Every capture session for this item, most recent first. Edit a row's numbers and hit Save to correct a misread price.",
+        "Chaque session de capture pour cet objet, la plus récente en premier. Modifie les chiffres d'une ligne et clique sur Enregistrer pour corriger un prix mal lu."
+    ),
+    LOADING_ELLIPSIS("Loading…", "Chargement…"),
+    NO_OBSERVATIONS_YET("No observations yet for this item.", "Aucune observation pour cet objet pour l'instant."),
+    ADD_PRICE_BY_HAND("Add a price by hand:", "Ajouter un prix manuellement :"),
+    SERVER_PLACEHOLDER("server", "serveur"),
+    LOWEST_PRICE_PLACEHOLDER("lowest price", "prix le plus bas"),
+    AVERAGE_PRICE_PLACEHOLDER("average price", "prix moyen"),
+    ADD_BUTTON("Add", "Ajouter"),
+    LOWEST_FIELD_LABEL("Lowest", "Min"),
+    AVERAGE_FIELD_LABEL("Average", "Moyenne"),
+    SAVE_BUTTON("Save", "Enregistrer"),
+    OBSERVATION_CORRECT_HINT(
+        "Corrects this row's prices, e.g. if the capture misread a digit. The original comment is kept, marked [corrected_manually].",
+        "Corrige les prix de cette ligne, par ex. si la capture a mal lu un chiffre. Le commentaire original est conservé, marqué [corrected_manually]."
+    ),
+    FLAG_BUTTON("Flag", "Signaler"),
+    FLAG_PARSING_ERROR("Parsing error", "Erreur de lecture"),
+    FLAG_PARSING_ERROR_HINT("The capture misread this price", "La capture a mal lu ce prix"),
+    FLAG_OUTLIER("Outlier", "Valeur aberrante"),
+    FLAG_OUTLIER_HINT("Looks abnormally high or low", "Semble anormalement haut ou bas"),
+    FLAG_DUPLICATE("Duplicate", "Doublon"),
+    FLAG_DUPLICATE_HINT("Same listing captured twice", "Même annonce capturée deux fois"),
+    FLAG_NEEDS_REVIEW("Needs review", "À vérifier"),
+    FLAG_NEEDS_REVIEW_HINT("Flag for manual verification", "Signaler pour vérification manuelle"),
+    FLAG_INFO_HINT(
+        "Tags this row for a data-quality reviewer -- e.g. \"this price looks wrong.\" Replaces its comment with the flag reason.",
+        "Étiquette cette ligne pour un relecteur qualité -- ex. « ce prix semble faux ». Remplace son commentaire par le motif du signalement."
+    ),
+    DELETE_BUTTON("Delete", "Supprimer"),
+    CRAFT_COST_ITEM_ID_PLACEHOLDER("itemId to craft", "id de l'objet à fabriquer"),
+    LOOKUP_BUTTON("Lookup", "Rechercher"),
+    COMPUTING_ELLIPSIS("Computing…", "Calcul…"),
+    NO_LOOKUP_YET_TITLE("No lookup yet", "Aucune recherche pour l'instant"),
+    NO_LOOKUP_YET_HINT("Enter a craftable item's id and hit Lookup.", "Entre l'id d'un objet fabricable et clique sur Rechercher."),
+    NO_ITEMS_MATCH_TITLE("No items match", "Aucun objet ne correspond"),
+    NO_ITEMS_MATCH_HINT(
+        "Try a broader name, level range, or fewer rarity filters.",
+        "Essaie un nom plus large, une autre plage de niveaux, ou moins de filtres de rareté."
+    ),
+    GROSS_MARGIN("Gross margin", "Marge brute"),
+    GROSS_MARGIN_HINT(
+        "Market price minus craft cost, before the HDV sales tax.",
+        "Prix du marché moins le coût de fabrication, avant la taxe de vente de l'HDV."
+    ),
+    MARKET_PRICE_HINT(
+        "The crafted item's own latest captured HDV price.",
+        "Le dernier prix HDV capturé de l'objet fabriqué lui-même."
+    ),
+    CONFIDENCE_LABEL("Confidence", "Confiance"),
+    CONFIDENCE_HINT(
+        "How reliable this estimate is: average price-capture confidence, reduced for every ingredient with no captured price.",
+        "Fiabilité de cette estimation : confiance moyenne des captures de prix, réduite pour chaque ingrédient sans prix capturé."
+    ),
+    MISSING_PRICES_LABEL("Missing prices", "Prix manquants"),
+    MISSING_PRICES_VALUE("%d ingredient(s)", "%d ingrédient(s)"),
+    MISSING_PRICES_HINT(
+        "These ingredients have no captured HDV price yet, so craft cost is a partial (underestimated) sum.",
+        "Ces ingrédients n'ont pas encore de prix HDV capturé, le coût de fabrication est donc une somme partielle (sous-estimée)."
+    ),
+    INGREDIENTS_TITLE("Ingredients", "Ingrédients"),
+    INGREDIENT_QUANTITY_SUBTOTAL("× %d — %s", "× %d — %s"),
+    NO_PRICE_SHORT("no price", "aucun prix"),
+
+    // Item category filters + CSV export (Market screen's Prices tab)
+    CATEGORY_EQUIPMENT("Equipment", "Équipement"),
+    CATEGORY_CREATURE("Creatures", "Créatures"),
+    CATEGORY_RESOURCE("Resources", "Ressources"),
+    CATEGORY_CONSUMABLE("Consumables", "Consommables"),
+    CATEGORY_CUSTOMIZATION("Cosmetics", "Cosmétiques"),
+    CATEGORY_MISCELLANEOUS("Miscellaneous", "Divers"),
+    EXPORT_CSV_BUTTON("Export CSV", "Exporter en CSV"),
+    TOAST_ITEMS_EXPORTED("Items exported", "Objets exportés"),
     ;
 
     fun value(lang: Lang): String =
@@ -664,6 +849,33 @@ private val SKILL_NAME_FR =
         "Wakfu Points" to "Points Wakfu",
         "Willpower" to "Volonté"
     )
+
+/** Localized label for a craft-cost decision ("craft" / "buy" / "insufficient_data" from CraftCostResponse). */
+fun craftDecisionLabel(
+    decision: String,
+    lang: Lang,
+): String =
+    when (decision) {
+        "craft" -> Tr.CRAFT_DECISION_CRAFT.value(lang)
+        "buy" -> Tr.CRAFT_DECISION_BUY.value(lang)
+        else -> Tr.CRAFT_DECISION_INSUFFICIENT.value(lang)
+    }
+
+/** Localized label for one of [ItemInfoResponse.category]'s raw strings (equipment/creature/
+ * resource/consumable/customization/miscellaneous) -- the Market screen's category filter chips. */
+fun categoryLabel(
+    category: String,
+    lang: Lang,
+): String =
+    when (category) {
+        "equipment" -> Tr.CATEGORY_EQUIPMENT.value(lang)
+        "creature" -> Tr.CATEGORY_CREATURE.value(lang)
+        "resource" -> Tr.CATEGORY_RESOURCE.value(lang)
+        "consumable" -> Tr.CATEGORY_CONSUMABLE.value(lang)
+        "customization" -> Tr.CATEGORY_CUSTOMIZATION.value(lang)
+        "miscellaneous" -> Tr.CATEGORY_MISCELLANEOUS.value(lang)
+        else -> category
+    }
 
 /** Localized display name for an equipment slot type. */
 fun ItemType.label(lang: Lang): String =

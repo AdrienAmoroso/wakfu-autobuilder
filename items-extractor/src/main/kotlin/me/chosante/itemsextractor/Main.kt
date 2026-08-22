@@ -15,14 +15,16 @@ private data class CategoryRef(
     val frSlug: String,
 )
 
-// Only the two categories that actually trade on the HDV outside of Equipment's coverage (gear,
-// runes, sublimations, pets/mounts/emblems -- see EquipmentCatalog). "customization" (mostly
-// account-bound cosmetics) and "miscellaneous" (quest items, mostly untradeable) are deliberately
-// left out; extend this list if a captured price still resolves to no name after this.
+// The four categories that trade on the HDV outside of Equipment's coverage (gear, runes,
+// sublimations, pets/mounts/emblems -- see EquipmentCatalog). "customization" (mostly account-bound
+// cosmetics) and "miscellaneous" (mostly quest items) are included for catalog completeness/
+// filtering (the Kamas/Market screens' category filter) even though many of their items never trade.
 private val CATEGORIES =
     listOf(
         CategoryRef("resource", "resources", "ressources"),
-        CategoryRef("consumable", "consumables", "consommables")
+        CategoryRef("consumable", "consumables", "consommables"),
+        CategoryRef("customization", "customization", "personnalisation"),
+        CategoryRef("miscellaneous", "miscellaneous", "divers")
     )
 
 private val rarityIndexToRarity =
@@ -40,8 +42,9 @@ private val rarityIndexToRarity =
 /**
  * Builds two files by crawling Ankama's public encyclopedia (no CDN gamedata feed covers either):
  * - `autobuilder/src/main/resources/resource-items.json`: the item categories [ItemSummary] exists
- *   to cover -- resources and consumables, which trade on the HDV but have no equipment-style CDN
- *   feed (see `ItemSummary`'s doc comment and this module's research trail for why). Also downloads
+ *   to cover -- resources, consumables, cosmetics and misc items, none of which have an
+ *   equipment-style CDN feed (see `ItemSummary`'s doc comment and this module's research trail for
+ *   why). Also downloads
  *   each item's hosted icon straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`.
  * - `autobuilder/src/main/resources/monster-drops.json`: every listed monster's drop table -- see
  *   `MonsterDropCrawler.kt`.

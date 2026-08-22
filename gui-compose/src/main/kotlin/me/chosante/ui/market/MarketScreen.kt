@@ -23,6 +23,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +51,11 @@ import me.chosante.ui.components.SmallTextField
 import me.chosante.ui.components.StatLine
 import me.chosante.ui.components.TabButton
 import me.chosante.ui.i18n.Lang
+import me.chosante.ui.i18n.Tr
+import me.chosante.ui.i18n.categoryLabel
+import me.chosante.ui.i18n.craftDecisionLabel
 import me.chosante.ui.i18n.label
+import me.chosante.ui.i18n.tr
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.MarketTab
 import me.chosante.ui.state.UiState
@@ -81,7 +86,9 @@ fun MarketScreen(
     onMinLevelChange: (String) -> Unit,
     onMaxLevelChange: (String) -> Unit,
     onToggleRarityFilter: (Rarity) -> Unit,
+    onToggleCategoryFilter: (String) -> Unit,
     onToggleExpandedItem: (Int) -> Unit,
+    onExportCsv: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(WColor.bg)) {
         MarketTabHeader(current = ui.marketTab, onSelect = onSelectTab)
@@ -100,7 +107,9 @@ fun MarketScreen(
                         onMinLevelChange = onMinLevelChange,
                         onMaxLevelChange = onMaxLevelChange,
                         onToggleRarityFilter = onToggleRarityFilter,
-                        onToggleExpandedItem = onToggleExpandedItem
+                        onToggleCategoryFilter = onToggleCategoryFilter,
+                        onToggleExpandedItem = onToggleExpandedItem,
+                        onExportCsv = onExportCsv
                     )
 
                 MarketTab.CRAFT_COST ->
@@ -134,8 +143,11 @@ private fun MarketTabHeader(
                         .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                TabButton(label = "Prices", selected = current == MarketTab.PRICES) { onSelect(MarketTab.PRICES) }
-                TabButton(label = "Craft Cost", selected = current == MarketTab.CRAFT_COST) { onSelect(MarketTab.CRAFT_COST) }
+                TabButton(label = tr(Tr.MARKET_TAB_PRICES), selected = current == MarketTab.PRICES) { onSelect(MarketTab.PRICES) }
+                TabButton(
+                    label = tr(Tr.MARKET_TAB_CRAFT_COST),
+                    selected = current == MarketTab.CRAFT_COST
+                ) { onSelect(MarketTab.CRAFT_COST) }
             }
         }
         Hairline()
@@ -155,7 +167,9 @@ private fun PricesTab(
     onMinLevelChange: (String) -> Unit,
     onMaxLevelChange: (String) -> Unit,
     onToggleRarityFilter: (Rarity) -> Unit,
+    onToggleCategoryFilter: (String) -> Unit,
     onToggleExpandedItem: (Int) -> Unit,
+    onExportCsv: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         CaptureBar(status = ui.captureStatus, onStart = onStartCapture, onStop = onStopCapture)
@@ -165,13 +179,19 @@ private fun PricesTab(
             minLevel = ui.marketMinLevel,
             maxLevel = ui.marketMaxLevel,
             selectedRarities = ui.marketRarityFilter,
+            selectedCategories = ui.marketCategoryFilter,
             lang = ui.lang,
             onQueryChange = onSearchQueryChange,
             onMinLevelChange = onMinLevelChange,
             onMaxLevelChange = onMaxLevelChange,
-            onToggleRarity = onToggleRarityFilter
+            onToggleRarity = onToggleRarityFilter,
+            onToggleCategory = onToggleCategoryFilter
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            SmallButton(text = tr(Tr.EXPORT_CSV_BUTTON), onClick = onExportCsv)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
         when {
             // A background refresh (e.g. after saving a price) failing must never blank out an
             // already-good list -- prefer showing what's still on screen over an error card, even
@@ -196,15 +216,17 @@ private fun PricesTab(
 
             ui.marketSearchState == MarketState.Error ->
                 MessageCard(
-                    title = "Can't reach market-server",
-                    hint = ui.error ?: "Start it with ./gradlew :market-server:run"
+                    title = tr(Tr.CANT_REACH_MARKET_SERVER),
+                    hint = ui.error ?: tr(Tr.START_MARKET_SERVER_HINT)
                 )
 
             ui.marketSearchState == MarketState.Ready ->
-                MessageCard(title = "No items match", hint = "Try a broader name, level range, or fewer rarity filters.")
+                MessageCard(title = tr(Tr.NO_ITEMS_MATCH_TITLE), hint = tr(Tr.NO_ITEMS_MATCH_HINT))
         }
     }
 }
+
+private val MARKET_CATEGORIES = listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous")
 
 @Composable
 private fun MarketSearchBar(
@@ -212,11 +234,13 @@ private fun MarketSearchBar(
     minLevel: String,
     maxLevel: String,
     selectedRarities: Set<Rarity>,
+    selectedCategories: Set<String>,
     lang: Lang,
     onQueryChange: (String) -> Unit,
     onMinLevelChange: (String) -> Unit,
     onMaxLevelChange: (String) -> Unit,
     onToggleRarity: (Rarity) -> Unit,
+    onToggleCategory: (String) -> Unit,
 ) {
     Column(
         modifier =
@@ -228,9 +252,9 @@ private fun MarketSearchBar(
                 .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SmallTextField(value = query, onValueChange = onQueryChange, placeholder = "Search by name…", modifier = Modifier.weight(1f))
-            SmallTextField(value = minLevel, onValueChange = onMinLevelChange, placeholder = "Min lvl", modifier = Modifier.width(90.dp))
-            SmallTextField(value = maxLevel, onValueChange = onMaxLevelChange, placeholder = "Max lvl", modifier = Modifier.width(90.dp))
+            SmallTextField(value = query, onValueChange = onQueryChange, placeholder = tr(Tr.MARKET_SEARCH_BY_NAME), modifier = Modifier.weight(1f))
+            SmallTextField(value = minLevel, onValueChange = onMinLevelChange, placeholder = tr(Tr.MARKET_MIN_LVL), modifier = Modifier.width(90.dp))
+            SmallTextField(value = maxLevel, onValueChange = onMaxLevelChange, placeholder = tr(Tr.MARKET_MAX_LVL), modifier = Modifier.width(90.dp))
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -238,6 +262,32 @@ private fun MarketSearchBar(
                 RarityChip(rarity = rarity, lang = lang, selected = rarity in selectedRarities, onClick = { onToggleRarity(rarity) })
             }
         }
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            MARKET_CATEGORIES.forEach { category ->
+                CategoryChip(category = category, lang = lang, selected = category in selectedCategories, onClick = { onToggleCategory(category) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryChip(
+    category: String,
+    lang: Lang,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(if (selected) WColor.accent.copy(alpha = 0.22f) else WColor.bg)
+                .border(1.dp, if (selected) WColor.accent else WColor.border, RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Text(text = categoryLabel(category, lang), style = WTypography.labelSmall.copy(color = if (selected) WColor.text else WColor.muted))
     }
 }
 
@@ -283,16 +333,16 @@ private fun CaptureBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when (phase) {
-            "capturing" -> SmallButton(text = "Stop Capture", onClick = onStop, filled = true)
-            "processing" -> Text(text = "Processing…", style = WTypography.labelMedium.copy(color = WColor.muted))
-            else -> SmallButton(text = "Start Capture", onClick = onStart, filled = true)
+            "capturing" -> SmallButton(text = tr(Tr.CAPTURE_STOP), onClick = onStop, filled = true)
+            "processing" -> Text(text = tr(Tr.CAPTURE_PROCESSING), style = WTypography.labelMedium.copy(color = WColor.muted))
+            else -> SmallButton(text = tr(Tr.CAPTURE_START), onClick = onStart, filled = true)
         }
         val statusText =
             when (phase) {
-                "capturing" -> "Capturing — started ${elapsedLabel(status?.startedAt)} ago"
-                "processing" -> "Parsing and importing captured prices…"
-                "error" -> "Error: ${status?.message ?: "unknown"}"
-                else -> status?.lastImportedCount?.let { "Idle — last capture imported $it price(s)" } ?: "Idle"
+                "capturing" -> tr(Tr.CAPTURE_CAPTURING_SINCE).format(elapsedLabel(status?.startedAt))
+                "processing" -> tr(Tr.CAPTURE_PARSING)
+                "error" -> tr(Tr.CAPTURE_ERROR).format(status?.message ?: tr(Tr.CAPTURE_UNKNOWN_ERROR))
+                else -> status?.lastImportedCount?.let { tr(Tr.CAPTURE_IDLE_LAST_IMPORT).format(it) } ?: tr(Tr.CAPTURE_IDLE)
             }
         Text(text = statusText, style = WTypography.bodySmall.copy(color = WColor.muted), modifier = Modifier.weight(1f))
     }
@@ -312,6 +362,8 @@ private fun elapsedLabel(startedAt: Long?): String {
  * pipeline's own format isn't controlled by this repo). Falls back to the raw string rather than
  * guessing or crashing when it doesn't parse.
  */
+@Composable
+@ReadOnlyComposable
 private fun observedAgoLabel(observedAt: String): String {
     val parsed =
         runCatching { LocalDateTime.parse(observedAt) }.getOrNull()
@@ -320,10 +372,10 @@ private fun observedAgoLabel(observedAt: String): String {
             ?: return observedAt
     val minutes = Duration.between(parsed, LocalDateTime.now()).toMinutes().coerceAtLeast(0)
     return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 60 * 24 -> "${minutes / 60}h ago"
-        else -> "${minutes / (60 * 24)}d ago"
+        minutes < 1 -> tr(Tr.JUST_NOW)
+        minutes < 60 -> tr(Tr.AGO_MINUTES).format(minutes)
+        minutes < 60 * 24 -> tr(Tr.AGO_HOURS).format(minutes / 60)
+        else -> tr(Tr.AGO_DAYS).format(minutes / (60 * 24))
     }
 }
 
@@ -391,19 +443,15 @@ private fun PriceSummary(
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (result.latestMinPrice == null) {
-            Text(text = "No price captured yet", style = WTypography.bodySmall.copy(color = WColor.faint))
+            Text(text = tr(Tr.NO_PRICE_CAPTURED_YET), style = WTypography.bodySmall.copy(color = WColor.faint))
         } else {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Lowest ${result.latestMinPrice} · Average ${result.latestAvgPrice}",
+                        text = tr(Tr.LOWEST_AVERAGE_SUMMARY).format(result.latestMinPrice, result.latestAvgPrice),
                         style = WTypography.bodyMedium
                     )
-                    InfoTip(
-                        text =
-                            "From the most recent HDV capture for this item: \"Lowest\" is the cheapest listing seen, " +
-                                "\"Average\" is the mean of every listing seen in that same capture."
-                    )
+                    InfoTip(text = tr(Tr.PRICE_SUMMARY_INFO))
                 }
                 Text(
                     text =
@@ -433,13 +481,13 @@ private fun ObservationHistoryPanel(
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = "Price history", style = WTypography.titleMedium)
-            InfoTip(text = "Every capture session for this item, most recent first. Edit a row's numbers and hit Save to correct a misread price.")
-            if (loading) Text(text = "Loading…", style = WTypography.labelSmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.PRICE_HISTORY_TITLE), style = WTypography.titleMedium)
+            InfoTip(text = tr(Tr.PRICE_HISTORY_INFO))
+            if (loading) Text(text = tr(Tr.LOADING_ELLIPSIS), style = WTypography.labelSmall.copy(color = WColor.muted))
         }
         Spacer(modifier = Modifier.height(8.dp))
         if (observations.isEmpty() && !loading) {
-            Text(text = "No observations yet for this item.", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.NO_OBSERVATIONS_YET), style = WTypography.bodySmall.copy(color = WColor.muted))
             Spacer(modifier = Modifier.height(8.dp))
         } else {
             observations.forEach { observation ->
@@ -467,22 +515,22 @@ private fun AddObservationForm(
     var avgPrice by remember(itemId) { mutableStateOf("") }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = "Add a price by hand:", style = WTypography.bodySmall.copy(color = WColor.muted))
-        SmallTextField(value = server, onValueChange = { server = it }, placeholder = "server", modifier = Modifier.width(120.dp))
+        Text(text = tr(Tr.ADD_PRICE_BY_HAND), style = WTypography.bodySmall.copy(color = WColor.muted))
+        SmallTextField(value = server, onValueChange = { server = it }, placeholder = tr(Tr.SERVER_PLACEHOLDER), modifier = Modifier.width(120.dp))
         SmallTextField(
             value = minPrice,
             onValueChange = { minPrice = it.filter(Char::isDigit) },
-            placeholder = "lowest price",
+            placeholder = tr(Tr.LOWEST_PRICE_PLACEHOLDER),
             modifier = Modifier.width(110.dp)
         )
         SmallTextField(
             value = avgPrice,
             onValueChange = { avgPrice = it.filter(Char::isDigit) },
-            placeholder = "average price",
+            placeholder = tr(Tr.AVERAGE_PRICE_PLACEHOLDER),
             modifier = Modifier.width(120.dp)
         )
         SmallButton(
-            text = "Add",
+            text = tr(Tr.ADD_BUTTON),
             filled = true,
             onClick = {
                 val min = minPrice.toLongOrNull() ?: return@SmallButton
@@ -531,18 +579,18 @@ private fun ObservationRow(
             Text(text = observation.server.ifBlank { "—" }, style = WTypography.bodySmall)
             Text(text = observedAgoLabel(observation.observedAt), style = WTypography.labelSmall.copy(color = WColor.muted))
         }
-        LabeledField(label = "Lowest", value = minPriceText, onValueChange = { minPriceText = it.filter(Char::isDigit) })
-        LabeledField(label = "Average", value = avgPriceText, onValueChange = { avgPriceText = it.filter(Char::isDigit) })
+        LabeledField(label = tr(Tr.LOWEST_FIELD_LABEL), value = minPriceText, onValueChange = { minPriceText = it.filter(Char::isDigit) })
+        LabeledField(label = tr(Tr.AVERAGE_FIELD_LABEL), value = avgPriceText, onValueChange = { avgPriceText = it.filter(Char::isDigit) })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SmallButton(
-                text = "Save",
+                text = tr(Tr.SAVE_BUTTON),
                 onClick = {
                     val min = minPriceText.toLongOrNull() ?: return@SmallButton
                     val avg = avgPriceText.toLongOrNull() ?: return@SmallButton
                     onUpdatePrices(observation.id, min, avg, observation.medianPrice)
                 }
             )
-            InfoTip(text = "Corrects this row's prices, e.g. if the capture misread a digit. The original comment is kept, marked [corrected_manually].")
+            InfoTip(text = tr(Tr.OBSERVATION_CORRECT_HINT))
         }
         Text(
             text = observation.comment?.takeIf { it.isNotBlank() } ?: "",
@@ -551,9 +599,9 @@ private fun ObservationRow(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box {
-                SmallButton(text = "Flag", onClick = { flagMenuOpen = true })
+                SmallButton(text = tr(Tr.FLAG_BUTTON), onClick = { flagMenuOpen = true })
                 DropdownMenu(expanded = flagMenuOpen, onDismissRequest = { flagMenuOpen = false }, containerColor = WColor.surface) {
-                    flagMotifOptions.forEach { (motif, label, explanation) ->
+                    flagMotifOptions().forEach { (motif, label, explanation) ->
                         DropdownMenuItem(
                             text = {
                                 Column {
@@ -569,18 +617,20 @@ private fun ObservationRow(
                     }
                 }
             }
-            InfoTip(text = "Tags this row for a data-quality reviewer -- e.g. \"this price looks wrong.\" Replaces its comment with the flag reason.")
+            InfoTip(text = tr(Tr.FLAG_INFO_HINT))
         }
-        SmallButton(text = "Delete", onClick = onDelete)
+        SmallButton(text = tr(Tr.DELETE_BUTTON), onClick = onDelete)
     }
 }
 
-private val flagMotifOptions =
+@Composable
+@ReadOnlyComposable
+private fun flagMotifOptions() =
     listOf(
-        Triple(FlagMotif.PARSING_ERROR, "Parsing error", "The capture misread this price"),
-        Triple(FlagMotif.OUTLIER, "Outlier", "Looks abnormally high or low"),
-        Triple(FlagMotif.DUPLICATE, "Duplicate", "Same listing captured twice"),
-        Triple(FlagMotif.MANUAL_CHECK, "Needs review", "Flag for manual verification")
+        Triple(FlagMotif.PARSING_ERROR, tr(Tr.FLAG_PARSING_ERROR), tr(Tr.FLAG_PARSING_ERROR_HINT)),
+        Triple(FlagMotif.OUTLIER, tr(Tr.FLAG_OUTLIER), tr(Tr.FLAG_OUTLIER_HINT)),
+        Triple(FlagMotif.DUPLICATE, tr(Tr.FLAG_DUPLICATE), tr(Tr.FLAG_DUPLICATE_HINT)),
+        Triple(FlagMotif.MANUAL_CHECK, tr(Tr.FLAG_NEEDS_REVIEW), tr(Tr.FLAG_NEEDS_REVIEW_HINT))
     )
 
 @Composable
@@ -607,18 +657,18 @@ private fun CraftCostTab(
             SmallTextField(
                 value = ui.craftCostItemId,
                 onValueChange = onCraftCostItemIdChange,
-                placeholder = "itemId to craft",
+                placeholder = tr(Tr.CRAFT_COST_ITEM_ID_PLACEHOLDER),
                 modifier = Modifier.width(200.dp)
             )
-            SmallButton(text = "Lookup", onClick = onLookupCraftCost, filled = true)
+            SmallButton(text = tr(Tr.LOOKUP_BUTTON), onClick = onLookupCraftCost, filled = true)
             if (ui.craftCostState == MarketState.Loading) {
-                Text(text = "Computing…", style = WTypography.labelSmall.copy(color = WColor.muted))
+                Text(text = tr(Tr.COMPUTING_ELLIPSIS), style = WTypography.labelSmall.copy(color = WColor.muted))
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
         when {
             ui.craftCostState == MarketState.Error ->
-                MessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
+                MessageCard(title = tr(Tr.CANT_REACH_MARKET_SERVER), hint = ui.error ?: tr(Tr.START_MARKET_SERVER_HINT))
 
             ui.craftCostResult != null ->
                 CraftCostResultCard(
@@ -628,7 +678,7 @@ private fun CraftCostTab(
                     onRequestItemInfo = onRequestItemInfo
                 )
 
-            else -> MessageCard(title = "No lookup yet", hint = "Enter a craftable item's id and hit Lookup.")
+            else -> MessageCard(title = tr(Tr.NO_LOOKUP_YET_TITLE), hint = tr(Tr.NO_LOOKUP_YET_HINT))
         }
     }
 }
@@ -657,21 +707,36 @@ private fun CraftCostResultCard(
                 "buy" -> WColor.danger
                 else -> WColor.muted
             }
-        Text(text = result.decision.uppercase(), style = WTypography.headlineSmall.copy(color = decisionColor), fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = craftDecisionLabel(result.decision, lang),
+                style = WTypography.headlineSmall.copy(color = decisionColor),
+                fontWeight = FontWeight.Bold
+            )
+            InfoTip(text = tr(Tr.CRAFT_DECISION_HINT))
+        }
         Spacer(modifier = Modifier.height(10.dp))
-        StatLine("Craft cost", result.craftCost?.toString() ?: "—")
-        StatLine("Market price", result.marketPrice?.toString() ?: "—")
-        StatLine("Gross margin", result.grossMargin?.toString() ?: "—")
-        StatLine("Net margin", result.netMargin?.toString() ?: "—")
-        StatLine("ROI", result.roi?.let { "${(it * 100).toInt()}%" } ?: "—")
-        StatLine("Confidence", "${(result.confidence * 100).toInt()}%")
+        StatLine(tr(Tr.CRAFT_COST_LABEL), result.craftCost?.toString() ?: "—", hint = tr(Tr.CRAFT_COST_HINT))
+        StatLine(tr(Tr.MARKET_PRICE_LABEL), result.marketPrice?.toString() ?: "—", hint = tr(Tr.MARKET_PRICE_HINT))
+        StatLine(tr(Tr.GROSS_MARGIN), result.grossMargin?.toString() ?: "—", hint = tr(Tr.GROSS_MARGIN_HINT))
+        StatLine(tr(Tr.NET_MARGIN), result.netMargin?.toString() ?: "—", hint = tr(Tr.NET_MARGIN_HINT))
+        StatLine(tr(Tr.ROI_LABEL), result.roi?.let { "${(it * 100).toInt()}%" } ?: "—", hint = tr(Tr.ROI_HINT))
+        StatLine(
+            tr(Tr.CONFIDENCE_LABEL),
+            "${(result.confidence * 100).toInt()}%",
+            hint = tr(Tr.CONFIDENCE_HINT)
+        )
         if (result.missingPriceCount > 0) {
-            StatLine("Missing prices", "${result.missingPriceCount} ingredient(s)")
+            StatLine(
+                tr(Tr.MISSING_PRICES_LABEL),
+                tr(Tr.MISSING_PRICES_VALUE).format(result.missingPriceCount),
+                hint = tr(Tr.MISSING_PRICES_HINT)
+            )
         }
         Spacer(modifier = Modifier.height(10.dp))
         Hairline()
         Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "Ingredients", style = WTypography.titleMedium)
+        Text(text = tr(Tr.INGREDIENTS_TITLE), style = WTypography.titleMedium)
         Spacer(modifier = Modifier.height(6.dp))
         result.ingredients.forEach { ingredient ->
             Row(
@@ -687,7 +752,7 @@ private fun CraftCostResultCard(
                     modifier = Modifier.widthIn(min = 200.dp)
                 )
                 Text(
-                    text = "× ${ingredient.quantity} — ${ingredient.subtotal?.toString() ?: "no price"}",
+                    text = tr(Tr.INGREDIENT_QUANTITY_SUBTOTAL).format(ingredient.quantity, ingredient.subtotal?.toString() ?: tr(Tr.NO_PRICE_SHORT)),
                     style = WTypography.bodySmall.copy(color = WColor.muted)
                 )
             }

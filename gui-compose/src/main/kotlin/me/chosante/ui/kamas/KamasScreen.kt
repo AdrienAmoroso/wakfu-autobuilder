@@ -28,6 +28,7 @@ import me.chosante.marketclient.HarvestOpportunity
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.MonsterFarmingOpportunity
 import me.chosante.ui.components.Hairline
+import me.chosante.ui.components.InfoTip
 import me.chosante.ui.components.ItemBadge
 import me.chosante.ui.components.ItemThumbnail
 import me.chosante.ui.components.MessageCard
@@ -36,6 +37,9 @@ import me.chosante.ui.components.StatLine
 import me.chosante.ui.components.TabButton
 import me.chosante.ui.components.localized
 import me.chosante.ui.i18n.Lang
+import me.chosante.ui.i18n.Tr
+import me.chosante.ui.i18n.craftDecisionLabel
+import me.chosante.ui.i18n.tr
 import me.chosante.ui.state.KamasTab
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.UiState
@@ -87,9 +91,12 @@ private fun KamasTabHeader(
                         .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                TabButton(label = "Crafting", selected = current == KamasTab.CRAFTING) { onSelect(KamasTab.CRAFTING) }
-                TabButton(label = "Harvesting", selected = current == KamasTab.HARVESTING) { onSelect(KamasTab.HARVESTING) }
-                TabButton(label = "Monster Farming", selected = current == KamasTab.MONSTER_FARMING) { onSelect(KamasTab.MONSTER_FARMING) }
+                TabButton(label = tr(Tr.KAMAS_TAB_CRAFTING), selected = current == KamasTab.CRAFTING) { onSelect(KamasTab.CRAFTING) }
+                TabButton(label = tr(Tr.KAMAS_TAB_HARVESTING), selected = current == KamasTab.HARVESTING) { onSelect(KamasTab.HARVESTING) }
+                TabButton(
+                    label = tr(Tr.KAMAS_TAB_MONSTER_FARMING),
+                    selected = current == KamasTab.MONSTER_FARMING
+                ) { onSelect(KamasTab.MONSTER_FARMING) }
             }
         }
         Hairline()
@@ -103,9 +110,9 @@ private fun CraftingTab(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Recipes worth crafting and reselling, best ROI first", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.KAMAS_CRAFTING_SUBTITLE), style = WTypography.bodySmall.copy(color = WColor.muted))
             if (ui.craftOpportunitiesState == MarketState.Loading) {
-                Text(text = "Scanning recipes…", style = WTypography.labelSmall.copy(color = WColor.muted))
+                Text(text = tr(Tr.KAMAS_SCANNING_RECIPES), style = WTypography.labelSmall.copy(color = WColor.muted))
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
@@ -123,13 +130,10 @@ private fun CraftingTab(
                 }
 
             ui.craftOpportunitiesState == MarketState.Error ->
-                MessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
+                MessageCard(title = tr(Tr.CANT_REACH_MARKET_SERVER), hint = ui.error ?: tr(Tr.START_MARKET_SERVER_HINT))
 
             ui.craftOpportunitiesState == MarketState.Ready ->
-                MessageCard(
-                    title = "No profitable crafts found yet",
-                    hint = "This needs both a recipe's ingredients AND its crafted result to have a captured price. Capture more HDV prices and check back."
-                )
+                MessageCard(title = tr(Tr.KAMAS_NO_CRAFTS_TITLE), hint = tr(Tr.KAMAS_NO_CRAFTS_HINT))
         }
     }
 }
@@ -161,18 +165,25 @@ private fun CraftOpportunityRow(
             modifier = Modifier.widthIn(min = 220.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
-            StatLine("ROI", opportunity.roi?.let { "${(it * 100).toInt()}%" } ?: "—")
-            StatLine("Net margin", opportunity.netMargin?.toString() ?: "—")
+            StatLine(
+                tr(Tr.ROI_LABEL),
+                opportunity.roi?.let { "${(it * 100).toInt()}%" } ?: "—",
+                hint = tr(Tr.ROI_HINT)
+            )
+            StatLine(tr(Tr.NET_MARGIN), opportunity.netMargin?.toString() ?: "—", hint = tr(Tr.NET_MARGIN_HINT))
         }
         Column(modifier = Modifier.weight(1f)) {
-            StatLine("Craft cost", opportunity.craftCost.toString())
-            StatLine("Market price", opportunity.marketPrice?.toString() ?: "—")
+            StatLine(tr(Tr.CRAFT_COST_LABEL), opportunity.craftCost.toString(), hint = tr(Tr.CRAFT_COST_HINT))
+            StatLine(tr(Tr.MARKET_PRICE_LABEL), opportunity.marketPrice?.toString() ?: "—")
         }
-        Text(
-            text = opportunity.decision.uppercase(),
-            style = WTypography.labelMedium.copy(color = decisionColor),
-            fontWeight = FontWeight.Bold
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = craftDecisionLabel(opportunity.decision, lang),
+                style = WTypography.labelMedium.copy(color = decisionColor),
+                fontWeight = FontWeight.Bold
+            )
+            InfoTip(text = tr(Tr.CRAFT_DECISION_HINT))
+        }
     }
 }
 
@@ -180,9 +191,9 @@ private fun CraftOpportunityRow(
 private fun HarvestingTab(ui: UiState) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Harvest nodes worth farming, best expected value first", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.KAMAS_HARVESTING_SUBTITLE), style = WTypography.bodySmall.copy(color = WColor.muted))
             if (ui.harvestOpportunitiesState == MarketState.Loading) {
-                Text(text = "Scanning nodes…", style = WTypography.labelSmall.copy(color = WColor.muted))
+                Text(text = tr(Tr.KAMAS_SCANNING_NODES), style = WTypography.labelSmall.copy(color = WColor.muted))
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
@@ -195,13 +206,10 @@ private fun HarvestingTab(ui: UiState) {
                 }
 
             ui.harvestOpportunitiesState == MarketState.Error ->
-                MessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
+                MessageCard(title = tr(Tr.CANT_REACH_MARKET_SERVER), hint = ui.error ?: tr(Tr.START_MARKET_SERVER_HINT))
 
             ui.harvestOpportunitiesState == MarketState.Ready ->
-                MessageCard(
-                    title = "No harvestable value found yet",
-                    hint = "This needs at least one of a node's possible drops to have a captured price. Capture more HDV prices for raw materials and check back."
-                )
+                MessageCard(title = tr(Tr.KAMAS_NO_HARVEST_TITLE), hint = tr(Tr.KAMAS_NO_HARVEST_HINT))
         }
     }
 }
@@ -226,12 +234,23 @@ private fun HarvestOpportunityRow(
         ItemThumbnail(iconKey = node.iconKey, size = 32.dp)
         Column(modifier = Modifier.widthIn(min = 220.dp)) {
             Text(text = node.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text = "${node.category} · Skill lvl ${node.skillLevelRequired}+", style = WTypography.labelSmall.copy(color = WColor.muted))
+            Text(
+                text = tr(Tr.KAMAS_NODE_CATEGORY_SKILL).format(node.category, node.skillLevelRequired),
+                style = WTypography.labelSmall.copy(color = WColor.muted)
+            )
         }
         Column(modifier = Modifier.weight(1f)) {
-            StatLine("Expected value", opportunity.expectedValue?.toString() ?: "—")
+            StatLine(
+                tr(Tr.EXPECTED_VALUE_LABEL),
+                opportunity.expectedValue?.toString() ?: "—",
+                hint = tr(Tr.KAMAS_HARVEST_EXPECTED_VALUE_HINT)
+            )
             val pricedDrops = node.drops.size - opportunity.missingDropCount
-            StatLine("Priced drops", "$pricedDrops / ${node.drops.size}")
+            StatLine(
+                tr(Tr.PRICED_DROPS_LABEL),
+                "$pricedDrops / ${node.drops.size}",
+                hint = tr(Tr.PRICED_DROPS_HINT)
+            )
         }
     }
 }
@@ -240,9 +259,9 @@ private fun HarvestOpportunityRow(
 private fun MonsterFarmingTab(ui: UiState) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Monsters worth farming, best expected value per kill first", style = WTypography.bodySmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.KAMAS_MONSTER_FARMING_SUBTITLE), style = WTypography.bodySmall.copy(color = WColor.muted))
             if (ui.monsterFarmingOpportunitiesState == MarketState.Loading) {
-                Text(text = "Scanning monsters…", style = WTypography.labelSmall.copy(color = WColor.muted))
+                Text(text = tr(Tr.KAMAS_SCANNING_MONSTERS), style = WTypography.labelSmall.copy(color = WColor.muted))
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
@@ -255,13 +274,10 @@ private fun MonsterFarmingTab(ui: UiState) {
                 }
 
             ui.monsterFarmingOpportunitiesState == MarketState.Error ->
-                MessageCard(title = "Can't reach market-server", hint = ui.error ?: "Start it with ./gradlew :market-server:run")
+                MessageCard(title = tr(Tr.CANT_REACH_MARKET_SERVER), hint = ui.error ?: tr(Tr.START_MARKET_SERVER_HINT))
 
             ui.monsterFarmingOpportunitiesState == MarketState.Ready ->
-                MessageCard(
-                    title = "No farmable value found yet",
-                    hint = "This needs at least one of a monster's possible drops to have a captured price. Capture more HDV prices and check back."
-                )
+                MessageCard(title = tr(Tr.KAMAS_NO_MONSTER_TITLE), hint = tr(Tr.KAMAS_NO_MONSTER_HINT))
         }
     }
 }
@@ -286,12 +302,20 @@ private fun MonsterFarmingRow(
         MonsterIcon(monster = monster, size = 32.dp)
         Column(modifier = Modifier.widthIn(min = 220.dp)) {
             Text(text = monster.name.localized(lang), style = WTypography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text = "Lvl ${monster.level}", style = WTypography.labelSmall.copy(color = WColor.muted))
+            Text(text = tr(Tr.KAMAS_MONSTER_LEVEL).format(monster.level), style = WTypography.labelSmall.copy(color = WColor.muted))
         }
         Column(modifier = Modifier.weight(1f)) {
-            StatLine("Expected value", opportunity.expectedValue?.toString() ?: "—")
+            StatLine(
+                tr(Tr.EXPECTED_VALUE_LABEL),
+                opportunity.expectedValue?.toString() ?: "—",
+                hint = tr(Tr.KAMAS_MONSTER_EXPECTED_VALUE_HINT)
+            )
             if (opportunity.missingDropCount > 0) {
-                StatLine("Unpriced drops", opportunity.missingDropCount.toString())
+                StatLine(
+                    tr(Tr.UNPRICED_DROPS_LABEL),
+                    opportunity.missingDropCount.toString(),
+                    hint = tr(Tr.UNPRICED_DROPS_HINT)
+                )
             }
         }
     }

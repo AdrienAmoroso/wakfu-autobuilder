@@ -124,9 +124,15 @@ internal fun MessageCard(
 internal fun StatLine(
     label: String,
     value: String,
+    hint: String? = null,
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, style = WTypography.bodyMedium.copy(color = WColor.muted))
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text = label, style = WTypography.bodyMedium.copy(color = WColor.muted))
+            if (hint != null) {
+                InfoTip(text = hint)
+            }
+        }
         Text(text = value, style = WTypography.bodyMedium)
     }
 }
