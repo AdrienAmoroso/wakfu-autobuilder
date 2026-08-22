@@ -139,6 +139,13 @@ enum class BuilderTab {
 const val MIN_COMPARE_SLOTS = 2
 const val MAX_COMPARE_SLOTS = 4
 
+/** Rows per page for the Market screen's Prices tab -- see [UiState.marketPage]. */
+const val MARKET_PAGE_SIZE = 50
+
+/** Page count for a client-side-paginated list of [totalResults] items, always >= 1 (so an empty
+ * result set still reads as "Page 1 / 1" rather than a div-by-zero "Page 1 / 0"). */
+fun marketPageCount(totalResults: Int): Int = if (totalResults == 0) 1 else (totalResults + MARKET_PAGE_SIZE - 1) / MARKET_PAGE_SIZE
+
 /** Ordering options for the build library. See [organizeLibrary]. */
 enum class LibrarySort {
     NEWEST,
@@ -369,6 +376,10 @@ data class UiState(
     val marketCategoryFilter: Set<String> = emptySet(),
     val marketSearchResults: List<ItemSearchResult> = emptyList(),
     val marketSearchState: MarketState = MarketState.Idle,
+    /** 0-indexed current page into [marketSearchResults] (client-side -- the full filtered set is
+     * already fetched in one call, see BuildSearchModel.FULL_CATALOG_LIMIT). Reset to 0 whenever a
+     * new search lands, so an old page number never outlives the filter that produced it. */
+    val marketPage: Int = 0,
     /** The item currently expanded in [marketSearchResults], showing its full price-observation
      * history (edit/flag/delete, add a manual entry) inline below it. Null = none expanded. */
     val marketExpandedItemId: Int? = null,

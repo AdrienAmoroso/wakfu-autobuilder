@@ -121,9 +121,12 @@ internal fun expandGlobalResistance(targets: List<TargetStat>): List<TargetStat>
     } + perElement
 }
 
-// Comfortably covers the ~9,364-item catalog, so a CSV export always contains every item matching
-// the active filters, not just a truncated slice -- matches market-server's own MAX_SEARCH_LIMIT.
-private const val ITEM_EXPORT_LIMIT = 10_000
+// Comfortably covers the ~10,400-item catalog (equipment + resources/consumables/cosmetics/misc +
+// sublimations) -- matches market-server's own MAX_SEARCH_LIMIT. Used both by the CSV export and by
+// every *filtered* Prices-tab search (see runMarketSearch): the Market screen is meant to browse the
+// whole HDV, so a category/name/rarity filter must return every match, not a level-sorted slice cut
+// off long before most of the catalog is reached.
+private const val FULL_CATALOG_LIMIT = 20_000
 
 private fun itemsToCsv(results: List<ItemSearchResult>): String {
     val headers = listOf("item_id", "name_fr", "name_en", "level", "rarity", "category", "min_price", "avg_price", "server", "observed_at")
@@ -1381,6 +1384,13 @@ class BuildSearchModel(
         scheduleMarketSearch()
     }
 
+    /** Client-side pagination over the already-fetched [UiState.marketSearchResults] -- clamped so a
+     * stale page number (e.g. from a filter that just shrank the result count) can't go out of bounds. */
+    fun setMarketPage(page: Int) {
+        val pageCount = marketPageCount(ui.marketSearchResults.size)
+        ui = ui.copy(marketPage = page.coerceIn(0, (pageCount - 1).coerceAtLeast(0)))
+    }
+
     /** Debounced (300ms) live search triggered by every filter edit above. */
     private fun scheduleMarketSearch() {
         marketSearchJob?.cancel()
@@ -1406,9 +1416,14 @@ class BuildSearchModel(
                     minLevel = ui.marketMinLevel.toIntOrNull(),
                     maxLevel = ui.marketMaxLevel.toIntOrNull(),
                     rarities = ui.marketRarityFilter,
-                    categories = ui.marketCategoryFilter
+                    categories = ui.marketCategoryFilter,
+                    // Without this, market-server's own DEFAULT_SEARCH_LIMIT (50) silently truncated
+                    // any filtered browse to its 50 lowest-level matches (sorted by level ascending) --
+                    // e.g. selecting "Equipment" only ever showed level ~0-3 gear. The Prices tab is
+                    // meant to browse the whole HDV, so every filtered search requests the full catalog.
+                    limit = FULL_CATALOG_LIMIT
                 )
-            withContext(mainDispatcher) { ui = ui.copy(marketSearchResults = results, marketSearchState = MarketState.Ready) }
+            withContext(mainDispatcher) { ui = ui.copy(marketSearchResults = results, marketSearchState = MarketState.Ready, marketPage = 0) }
         } catch (exception: Exception) {
             withContext(mainDispatcher) {
                 ui = ui.copy(marketSearchState = MarketState.Error, error = exception.message ?: "Could not reach market-server")
@@ -1419,7 +1434,7 @@ class BuildSearchModel(
     /**
      * Exports every item matching the Prices tab's *current* filters (name/level/rarity/category)
      * as CSV -- not just whatever page is on screen, so the export always matches what the filters
-     * describe. A fresh, uncapped-in-practice search (see [ITEM_EXPORT_LIMIT]) rather than reusing
+     * describe. A fresh, uncapped-in-practice search (see [FULL_CATALOG_LIMIT]) rather than reusing
      * [UiState.marketSearchResults], which may be a smaller default-view slice.
      */
     fun exportItemsToCsv() {
@@ -1432,7 +1447,7 @@ class BuildSearchModel(
                         maxLevel = ui.marketMaxLevel.toIntOrNull(),
                         rarities = ui.marketRarityFilter,
                         categories = ui.marketCategoryFilter,
-                        limit = ITEM_EXPORT_LIMIT
+                        limit = FULL_CATALOG_LIMIT
                     )
                 } catch (exception: Exception) {
                     withContext(mainDispatcher) {

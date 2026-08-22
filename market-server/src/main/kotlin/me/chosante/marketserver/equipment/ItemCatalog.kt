@@ -5,6 +5,8 @@ import me.chosante.common.Equipment
 import me.chosante.common.ItemSummary
 import me.chosante.common.ItemType
 import me.chosante.common.Rarity
+import me.chosante.common.Sublimation
+import me.chosante.common.SublimationRarity
 import me.chosante.marketserver.dto.ItemInfoResponse
 
 // equipments.json / resource-items.json reach this module's classpath via the extra
@@ -33,16 +35,37 @@ object ItemCatalog {
         }
     }
 
-    // Equipment wins on an id collision -- shouldn't happen (the CDN equip feed and the encyclopedia
-    // categories this extractor covers are disjoint, confirmed during research), but if it ever does,
-    // the fuller, game-accurate source should win over the encyclopedia scrape.
-    private val all: List<ItemInfoResponse> by lazy {
-        val equipmentIds = equipmentById.keys
-        equipmentById.values.map { it.toItemInfoResponse() } +
-            resourceItemsById.values.filterNot { it.itemId in equipmentIds }.map { it.toItemInfoResponse() }
+    // Sublimations -- first-party data (bdata-extractor, see AGENTS.md), keyed by their real in-game
+    // item id (zenithId, used for Zenith's /shard/add -- confirmed non-zero for all 232 entries).
+    // Optional for the same reason resourceItemsById is (an older build predating this file).
+    private val sublimationsById: Map<Int, Sublimation> by lazy {
+        val stream = ItemCatalog::class.java.getResourceAsStream("/sublimations.json")
+        if (stream == null) {
+            emptyMap()
+        } else {
+            json.decodeFromString<List<Sublimation>>(stream.bufferedReader().readText()).associateBy { it.zenithId }
+        }
     }
 
-    fun findById(id: Int): ItemInfoResponse? = equipmentById[id]?.toItemInfoResponse() ?: resourceItemsById[id]?.toItemInfoResponse()
+    // Equipment wins on an id collision with resource items -- shouldn't happen (the CDN equip feed
+    // and the encyclopedia categories this extractor covers are disjoint, confirmed during research).
+    // Sublimations are a *real*, NOT hypothetical, collision though: items-extractor's encyclopedia
+    // crawl (resources/consumables/customization/miscellaneous) already independently picks up 228 of
+    // the 232 known sublimations under one of those generic categories (confirmed against real data --
+    // e.g. itemId 24130 "Inflexibility" is both a resource-items.json entry AND a sublimation).
+    // sublimations.json is the richer, purpose-built, first-party source for those ids (accurate
+    // rarity/kind/tier, not just a name/level scraped off the wrong listing page), so it wins over the
+    // generic resource-items entry -- this also means most sublimations inherit a real icon for free
+    // (items-extractor already downloaded it under the same id).
+    private val all: List<ItemInfoResponse> by lazy {
+        val equipmentIds = equipmentById.keys
+        val sublimationIds = sublimationsById.keys
+        equipmentById.values.map { it.toItemInfoResponse() } +
+            sublimationsById.values.filterNot { it.zenithId in equipmentIds }.map { it.toItemInfoResponse() } +
+            resourceItemsById.values.filterNot { it.itemId in equipmentIds || it.itemId in sublimationIds }.map { it.toItemInfoResponse() }
+    }
+
+    fun findById(id: Int): ItemInfoResponse? = equipmentById[id]?.toItemInfoResponse() ?: sublimationsById[id]?.toItemInfoResponse() ?: resourceItemsById[id]?.toItemInfoResponse()
 
     fun search(
         name: String?,
@@ -82,3 +105,22 @@ private fun Equipment.toItemInfoResponse() =
 
 private fun ItemSummary.toItemInfoResponse() =
     ItemInfoResponse(itemId = itemId, name = name, level = level, rarity = rarity, iconKey = iconKey, category = category, isEquipment = false)
+
+// Sublimations aren't leveled (no character-level requirement) -- 0 is honest, not a placeholder for
+// missing data. SublimationRarity is a coarser 3-value scale than equipment's Rarity; NORMAL maps to
+// COMMON as the closest "base tier" analog (display-only -- nothing solver-facing reads this mapping).
+private fun Sublimation.toItemInfoResponse() =
+    ItemInfoResponse(
+        itemId = zenithId,
+        name = name,
+        level = 0,
+        rarity =
+            when (rarity) {
+                SublimationRarity.EPIC -> Rarity.EPIC
+                SublimationRarity.RELIC -> Rarity.RELIC
+                SublimationRarity.NORMAL -> Rarity.COMMON
+            },
+        iconKey = zenithId,
+        category = "sublimation",
+        isEquipment = false
+    )

@@ -64,6 +64,39 @@ class ItemRoutesTest {
         }
 
     @Test
+    fun `search filters by the sublimation category, resolving its real in-game item id`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            // Real fixture: stateId 5073, zenithId 24130, EN name "Inflexibility" (EPIC) -- verified
+            // against the committed sublimations.json.
+            val matching = client.get("/api/items/search?name=Inflexibility&category=sublimation")
+            val wrongCategory = client.get("/api/items/search?name=Inflexibility&category=equipment")
+
+            assertThat(matching.bodyAsText()).contains("\"itemId\":24130").contains("\"category\":\"sublimation\"")
+            assertThat(wrongCategory.bodyAsText()).doesNotContain("\"itemId\":24130")
+        }
+
+    @Test
+    fun `a large explicit limit is honored, not silently clamped back to the old 200-row ceiling`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            // Equipment alone is several thousand items. This pins two things together: (1) the Market
+            // screen's Prices tab (BuildSearchModel.FULL_CATALOG_LIMIT) always requests a large limit
+            // for any filtered browse -- without that fix, an unset `limit` fell back to
+            // DEFAULT_SEARCH_LIMIT (50) and, combined with the level-ascending sort, a category filter
+            // only ever surfaced its lowest-level handful (e.g. "Equipment" looked like it was only
+            // levels 0-3); (2) MAX_SEARCH_LIMIT must actually be raised high enough to honor that
+            // request, not just the client-side intent.
+            val response = client.get("/api/items/search?category=equipment&limit=20000")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val itemCount = Regex("\"itemId\":").findAll(response.bodyAsText()).count()
+            assertThat(itemCount).isGreaterThan(200)
+        }
+
+    @Test
     fun `search with no filters returns recently observed items, not an arbitrary catalog slice`() =
         testApplication {
             application { module(dbPath = tempDbPath()) }

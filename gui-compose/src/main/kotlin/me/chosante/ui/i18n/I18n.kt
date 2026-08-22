@@ -701,6 +701,10 @@ enum class Tr(
     CATEGORY_CONSUMABLE("Consumables", "Consommables"),
     CATEGORY_CUSTOMIZATION("Cosmetics", "Cosmétiques"),
     CATEGORY_MISCELLANEOUS("Miscellaneous", "Divers"),
+    CATEGORY_SUBLIMATION("Sublimations", "Sublimations"),
+    PREVIOUS_PAGE("Previous", "Précédent"),
+    NEXT_PAGE("Next", "Suivant"),
+    PAGE_LABEL("Page %d / %d", "Page %d / %d"),
     EXPORT_CSV_BUTTON("Export CSV", "Exporter en CSV"),
     TOAST_ITEMS_EXPORTED("Items exported", "Objets exportés"),
     ;
@@ -874,6 +878,7 @@ fun categoryLabel(
         "consumable" -> Tr.CATEGORY_CONSUMABLE.value(lang)
         "customization" -> Tr.CATEGORY_CUSTOMIZATION.value(lang)
         "miscellaneous" -> Tr.CATEGORY_MISCELLANEOUS.value(lang)
+        "sublimation" -> Tr.CATEGORY_SUBLIMATION.value(lang)
         else -> category
     }
 

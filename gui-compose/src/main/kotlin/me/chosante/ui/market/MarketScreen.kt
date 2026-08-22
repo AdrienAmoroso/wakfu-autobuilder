@@ -56,10 +56,12 @@ import me.chosante.ui.i18n.categoryLabel
 import me.chosante.ui.i18n.craftDecisionLabel
 import me.chosante.ui.i18n.label
 import me.chosante.ui.i18n.tr
+import me.chosante.ui.state.MARKET_PAGE_SIZE
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.MarketTab
 import me.chosante.ui.state.UiState
 import me.chosante.ui.state.color
+import me.chosante.ui.state.marketPageCount
 import me.chosante.ui.theme.WColor
 import me.chosante.ui.theme.WDimens
 import me.chosante.ui.theme.WTypography
@@ -89,6 +91,7 @@ fun MarketScreen(
     onToggleCategoryFilter: (String) -> Unit,
     onToggleExpandedItem: (Int) -> Unit,
     onExportCsv: () -> Unit,
+    onSetPage: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(WColor.bg)) {
         MarketTabHeader(current = ui.marketTab, onSelect = onSelectTab)
@@ -109,7 +112,8 @@ fun MarketScreen(
                         onToggleRarityFilter = onToggleRarityFilter,
                         onToggleCategoryFilter = onToggleCategoryFilter,
                         onToggleExpandedItem = onToggleExpandedItem,
-                        onExportCsv = onExportCsv
+                        onExportCsv = onExportCsv,
+                        onSetPage = onSetPage
                     )
 
                 MarketTab.CRAFT_COST ->
@@ -170,6 +174,7 @@ private fun PricesTab(
     onToggleCategoryFilter: (String) -> Unit,
     onToggleExpandedItem: (Int) -> Unit,
     onExportCsv: () -> Unit,
+    onSetPage: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         CaptureBar(status = ui.captureStatus, onStart = onStartCapture, onStop = onStopCapture)
@@ -188,17 +193,24 @@ private fun PricesTab(
             onToggleCategory = onToggleCategoryFilter
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        val pageCount = marketPageCount(ui.marketSearchResults.size)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            if (ui.marketSearchResults.isNotEmpty()) {
+                PageControls(page = ui.marketPage, pageCount = pageCount, onSetPage = onSetPage)
+            } else {
+                Spacer(modifier = Modifier)
+            }
             SmallButton(text = tr(Tr.EXPORT_CSV_BUTTON), onClick = onExportCsv)
         }
         Spacer(modifier = Modifier.height(4.dp))
+        val pagedResults = remember(ui.marketSearchResults, ui.marketPage) { ui.marketSearchResults.chunked(MARKET_PAGE_SIZE).getOrElse(ui.marketPage) { emptyList() } }
         when {
             // A background refresh (e.g. after saving a price) failing must never blank out an
             // already-good list -- prefer showing what's still on screen over an error card, even
             // if marketSearchState flipped to Error in the meantime.
             ui.marketSearchResults.isNotEmpty() ->
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(ui.marketSearchResults, key = { it.item.itemId }) { result ->
+                    items(pagedResults, key = { it.item.itemId }) { result ->
                         ItemSearchResultCard(
                             result = result,
                             lang = ui.lang,
@@ -226,7 +238,22 @@ private fun PricesTab(
     }
 }
 
-private val MARKET_CATEGORIES = listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous")
+/** Previous/Next + "Page X / Y", client-side over the already-fetched full filtered set (see
+ * BuildSearchModel.FULL_CATALOG_LIMIT / UiState.marketPage). */
+@Composable
+private fun PageControls(
+    page: Int,
+    pageCount: Int,
+    onSetPage: (Int) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        SmallButton(text = tr(Tr.PREVIOUS_PAGE), onClick = { onSetPage(page - 1) }, enabled = page > 0)
+        Text(text = tr(Tr.PAGE_LABEL).format(page + 1, pageCount), style = WTypography.labelMedium.copy(color = WColor.muted))
+        SmallButton(text = tr(Tr.NEXT_PAGE), onClick = { onSetPage(page + 1) }, enabled = page < pageCount - 1)
+    }
+}
+
+private val MARKET_CATEGORIES = listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous", "sublimation")
 
 @Composable
 private fun MarketSearchBar(

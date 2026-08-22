@@ -54,6 +54,7 @@ internal fun SmallButton(
     text: String,
     onClick: () -> Unit,
     filled: Boolean = false,
+    enabled: Boolean = true,
 ) {
     Box(
         modifier =
@@ -61,10 +62,23 @@ internal fun SmallButton(
                 .clip(RoundedCornerShape(8.dp))
                 .background(if (filled) WColor.accent else WColor.raised)
                 .border(1.dp, if (filled) WColor.accent else WColor.border, RoundedCornerShape(8.dp))
-                .clickable(onClick = onClick)
+                .clickable(enabled = enabled, onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Text(text = text, style = WTypography.labelMedium.copy(color = if (filled) WColor.bg else WColor.text))
+        Text(
+            text = text,
+            style =
+                WTypography.labelMedium.copy(
+                    color =
+                        if (!enabled) {
+                            WColor.faint
+                        } else if (filled) {
+                            WColor.bg
+                        } else {
+                            WColor.text
+                        }
+                )
+        )
     }
 }
 

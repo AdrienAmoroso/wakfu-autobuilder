@@ -171,7 +171,8 @@ fun AppShell(
                                 onToggleRarityFilter = model::toggleMarketRarityFilter,
                                 onToggleCategoryFilter = model::toggleMarketCategoryFilter,
                                 onToggleExpandedItem = model::toggleExpandedMarketItem,
-                                onExportCsv = model::exportItemsToCsv
+                                onExportCsv = model::exportItemsToCsv,
+                                onSetPage = model::setMarketPage
                             )
 
                         Screen.Kamas ->

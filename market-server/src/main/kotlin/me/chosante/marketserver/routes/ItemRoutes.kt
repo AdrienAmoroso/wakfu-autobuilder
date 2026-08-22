@@ -12,10 +12,13 @@ import org.jetbrains.exposed.v1.jdbc.Database
 
 private const val DEFAULT_SEARCH_LIMIT = 50
 
-// Raised well past the old 200 -- the CSV-export flow (Market screen) intentionally requests up to
-// this many rows in one call so an export always matches its filters exactly, not just one page.
-// Safe here: a local server for a single desktop user, not a public API.
-private const val MAX_SEARCH_LIMIT = 10_000
+// Comfortably exceeds the full catalog (~10,400 items: equipment + resources/consumables/cosmetics/
+// misc + sublimations). The Market screen's Prices tab always requests this many for any *filtered*
+// browse (see BuildSearchModel.FULL_CATALOG_LIMIT) so a category/name/rarity filter returns every
+// match, not a level-sorted slice truncated well before most of the catalog is even reached -- the
+// CSV export relies on the same guarantee. Safe here: a local server for a single desktop user, not
+// a public API.
+private const val MAX_SEARCH_LIMIT = 20_000
 
 fun Route.itemRoutes(database: Database) {
     get("/api/items/{id}") {
@@ -30,11 +33,12 @@ fun Route.itemRoutes(database: Database) {
         }
     }
 
-    // HDV-style browse: search the item catalog (equipment + resources/consumables/cosmetics/misc)
-    // by name/level/rarity/category, embedding each hit's latest known price so the Market screen's
-    // Prices tab can render a full "browse the auction house" list without a follow-up request per
-    // row. `category` is one of ItemInfoResponse's raw category strings (equipment/creature/
-    // resource/consumable/customization/miscellaneous), comma-separated for multiple.
+    // HDV-style browse: search the item catalog (equipment + resources/consumables/cosmetics/misc +
+    // sublimations) by name/level/rarity/category, embedding each hit's latest known price so the
+    // Market screen's Prices tab can render a full "browse the auction house" list without a
+    // follow-up request per row. `category` is one of ItemInfoResponse's raw category strings
+    // (equipment/creature/resource/consumable/customization/miscellaneous/sublimation),
+    // comma-separated for multiple.
     get("/api/items/search") {
         val params = call.request.queryParameters
         val name = params["name"]?.trim()?.ifBlank { null }
