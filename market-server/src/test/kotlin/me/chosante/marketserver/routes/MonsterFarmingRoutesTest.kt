@@ -21,6 +21,14 @@ import java.nio.file.Files
 private const val BLACK_GOBBLY_ID = 2
 private const val GOBBALL_SKIN_ITEM_ID = 11528
 
+// Real monsters confirmed (against the committed monsters.json/monster-drops.json/
+// monster-overlay.json) to have NO drop-table entry at all -- before MonsterDropCatalog's inner
+// join was fixed to a left join, neither would ever have appeared here. "Celestial Gobball" is a
+// boss (rank >= 1, so it's already shown in the Builder's boss picker) to lock in that even bosses
+// were being silently dropped; "Astrub Knight" is an ordinary (non-boss) monster.
+private const val BOSS_WITH_NO_DROPS_ID = 5526
+private const val REGULAR_MONSTER_WITH_NO_DROPS_ID = 2867
+
 class MonsterFarmingRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -67,6 +75,28 @@ class MonsterFarmingRoutesTest {
             // confirmed against the real committed monster-drops.json); only Gobball Skin has a
             // captured price here.
             assertThat(blackGobbly.missingDropCount).isEqualTo(7)
+        }
+
+    @Test
+    fun `a monster with no known drop table still appears, honestly, rather than being hidden`() =
+        testApplication {
+            application { module(dbPath = tempDbPath()) }
+
+            val response = client.get("/api/monster-drops/opportunities?limit=5000")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val results = json.decodeFromString(ListSerializer(MonsterFarmingOpportunity.serializer()), response.bodyAsText())
+            // Catalog-wide: every monster in monsters.json (2846), not just the ~728 with drops.
+            assertThat(results.size).isGreaterThan(2800)
+
+            val boss = results.first { it.monster.id == BOSS_WITH_NO_DROPS_ID }
+            assertThat(boss.totalDropCount).isEqualTo(0)
+            assertThat(boss.missingDropCount).isEqualTo(0)
+            assertThat(boss.expectedValue).isNull()
+
+            val regular = results.first { it.monster.id == REGULAR_MONSTER_WITH_NO_DROPS_ID }
+            assertThat(regular.totalDropCount).isEqualTo(0)
+            assertThat(regular.expectedValue).isNull()
         }
 
     @Test

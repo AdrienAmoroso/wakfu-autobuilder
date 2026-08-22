@@ -47,6 +47,19 @@ object ItemCatalog {
         }
     }
 
+    // Costume/Torch/Tool items -- real CDN equipment (name/level/rarity/icon) that EquipmentExtractor
+    // deliberately excludes from equipments.json because they fill no character slot (see
+    // EquipmentExtractor.extractNonCombatItems). Optional for the same reason resourceItemsById is
+    // (an older build predating this file).
+    private val equipmentAdjacentItemsById: Map<Int, ItemSummary> by lazy {
+        val stream = ItemCatalog::class.java.getResourceAsStream("/equipment-adjacent-items.json")
+        if (stream == null) {
+            emptyMap()
+        } else {
+            json.decodeFromString<List<ItemSummary>>(stream.bufferedReader().readText()).associateBy { it.itemId }
+        }
+    }
+
     // Equipment wins on an id collision with resource items -- shouldn't happen (the CDN equip feed
     // and the encyclopedia categories this extractor covers are disjoint, confirmed during research).
     // Sublimations are a *real*, NOT hypothetical, collision though: items-extractor's encyclopedia
@@ -56,16 +69,26 @@ object ItemCatalog {
     // sublimations.json is the richer, purpose-built, first-party source for those ids (accurate
     // rarity/kind/tier, not just a name/level scraped off the wrong listing page), so it wins over the
     // generic resource-items entry -- this also means most sublimations inherit a real icon for free
-    // (items-extractor already downloaded it under the same id).
+    // (items-extractor already downloaded it under the same id). Costumes are the same kind of real
+    // collision (cosmetics also show up under the encyclopedia's "customization" category) --
+    // equipment-adjacent-items.json's precise torch/tool/costume label wins over that generic one.
     private val all: List<ItemInfoResponse> by lazy {
         val equipmentIds = equipmentById.keys
         val sublimationIds = sublimationsById.keys
+        val equipmentAdjacentIds = equipmentAdjacentItemsById.keys
         equipmentById.values.map { it.toItemInfoResponse() } +
             sublimationsById.values.filterNot { it.zenithId in equipmentIds }.map { it.toItemInfoResponse() } +
-            resourceItemsById.values.filterNot { it.itemId in equipmentIds || it.itemId in sublimationIds }.map { it.toItemInfoResponse() }
+            equipmentAdjacentItemsById.values.map { it.toItemInfoResponse() } +
+            resourceItemsById.values
+                .filterNot { it.itemId in equipmentIds || it.itemId in sublimationIds || it.itemId in equipmentAdjacentIds }
+                .map { it.toItemInfoResponse() }
     }
 
-    fun findById(id: Int): ItemInfoResponse? = equipmentById[id]?.toItemInfoResponse() ?: sublimationsById[id]?.toItemInfoResponse() ?: resourceItemsById[id]?.toItemInfoResponse()
+    fun findById(id: Int): ItemInfoResponse? =
+        equipmentById[id]?.toItemInfoResponse()
+            ?: sublimationsById[id]?.toItemInfoResponse()
+            ?: equipmentAdjacentItemsById[id]?.toItemInfoResponse()
+            ?: resourceItemsById[id]?.toItemInfoResponse()
 
     fun search(
         name: String?,
@@ -100,7 +123,10 @@ private fun Equipment.toItemInfoResponse() =
         rarity = rarity,
         iconKey = guiId,
         category = if (itemType in CREATURE_ITEM_TYPES) "creature" else "equipment",
-        isEquipment = true
+        isEquipment = true,
+        characteristics = characteristics,
+        itemType = itemType,
+        maxShardSlots = maxShardSlots
     )
 
 private fun ItemSummary.toItemInfoResponse() =

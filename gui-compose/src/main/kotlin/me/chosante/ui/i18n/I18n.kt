@@ -582,6 +582,9 @@ enum class Tr(
         "Il faut qu'au moins un des butins possibles du monstre ait un prix capturé. Capture plus de prix HDV et reviens vérifier."
     ),
     KAMAS_MONSTER_LEVEL("Lvl %d", "Niv %d"),
+    MONSTER_HP_SHORT("%d HP", "%d PV"),
+    NO_KNOWN_DROPS("No known drops", "Butins inconnus"),
+    NO_ITEM_STATS("No stats", "Aucune statistique"),
     EXPECTED_VALUE_LABEL("Expected value", "Valeur attendue"),
     KAMAS_HARVEST_EXPECTED_VALUE_HINT(
         "Σ (drop chance × quantity × latest captured price) across this node's possible drops.",
@@ -702,6 +705,9 @@ enum class Tr(
     CATEGORY_CUSTOMIZATION("Cosmetics", "Cosmétiques"),
     CATEGORY_MISCELLANEOUS("Miscellaneous", "Divers"),
     CATEGORY_SUBLIMATION("Sublimations", "Sublimations"),
+    CATEGORY_TORCH("Torches", "Torches"),
+    CATEGORY_TOOL("Tools", "Outils"),
+    CATEGORY_COSTUME("Costumes", "Costumes"),
     PREVIOUS_PAGE("Previous", "Précédent"),
     NEXT_PAGE("Next", "Suivant"),
     PAGE_LABEL("Page %d / %d", "Page %d / %d"),
@@ -879,6 +885,9 @@ fun categoryLabel(
         "customization" -> Tr.CATEGORY_CUSTOMIZATION.value(lang)
         "miscellaneous" -> Tr.CATEGORY_MISCELLANEOUS.value(lang)
         "sublimation" -> Tr.CATEGORY_SUBLIMATION.value(lang)
+        "torch" -> Tr.CATEGORY_TORCH.value(lang)
+        "tool" -> Tr.CATEGORY_TOOL.value(lang)
+        "costume" -> Tr.CATEGORY_COSTUME.value(lang)
         else -> category
     }
 

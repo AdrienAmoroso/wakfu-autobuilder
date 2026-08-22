@@ -21,15 +21,24 @@ object MonsterDropCatalog {
         }
     }
 
-    /** Every monster with at least one known drop, joined with its `monsters.json` entry. Monsters whose id isn't in `monsters.json` are dropped (can't display a name/level). */
-    val all: List<Pair<Monster, MonsterLoot>> by lazy {
+    private val lootByMonsterId: Map<Int, MonsterLoot> by lazy {
         val stream = MonsterDropCatalog::class.java.getResourceAsStream("/monster-drops.json")
         if (stream == null) {
-            emptyList()
+            emptyMap()
         } else {
-            json
-                .decodeFromString<List<MonsterLoot>>(stream.bufferedReader().readText())
-                .mapNotNull { loot -> monstersById[loot.monsterId]?.let { it to loot } }
+            json.decodeFromString<List<MonsterLoot>>(stream.bufferedReader().readText()).associateBy { it.monsterId }
         }
+    }
+
+    /**
+     * Every monster in `monsters.json` (2846, including ~2118 with no public encyclopedia page and
+     * so no possible drop table -- a confirmed hard wall, not a bug), paired with its known loot or
+     * an empty one when absent. Left join, deliberately -- an earlier inner join silently hid every
+     * monster without a `monster-drops.json` entry (including 8 real bosses), which is exactly the
+     * kind of missing-not-shown gap this catalog exists to avoid. `MonsterLoot.drops.isEmpty()`
+     * means "no known drops," which the GUI surfaces honestly rather than hiding the monster.
+     */
+    val all: List<Pair<Monster, MonsterLoot>> by lazy {
+        monstersById.values.map { monster -> monster to (lootByMonsterId[monster.id] ?: MonsterLoot(monsterId = monster.id, drops = emptyList())) }
     }
 }

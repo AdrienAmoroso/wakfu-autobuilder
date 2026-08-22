@@ -3,7 +3,10 @@ package me.chosante.marketserver.routes
 import io.ktor.http.Parameters
 
 private const val DEFAULT_SCAN_LIMIT = 50
-private const val MAX_SCAN_LIMIT = 200
+
+// Comfortably covers the largest of the three scans -- Monster Farming now returns every monster
+// in the game (2846, see MonsterDropCatalog's doc comment), not just ones with known drops.
+private const val MAX_SCAN_LIMIT = 5_000
 
 /**
  * Shared `?limit=` parsing for the Kamas screen's three "opportunities" scan routes (crafting/

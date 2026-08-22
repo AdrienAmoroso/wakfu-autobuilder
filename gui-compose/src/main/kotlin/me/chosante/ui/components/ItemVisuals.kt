@@ -2,34 +2,47 @@ package me.chosante.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import me.chosante.common.Characteristic
 import me.chosante.common.Equipment
 import me.chosante.common.Rarity
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.ui.i18n.Lang
+import me.chosante.ui.i18n.Tr
+import me.chosante.ui.i18n.label
+import me.chosante.ui.i18n.tr
+import me.chosante.ui.state.statColor
 import me.chosante.ui.theme.WColor
+import me.chosante.ui.theme.WType
 import me.chosante.ui.theme.WTypography
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -228,26 +241,107 @@ internal fun ItemBadge(
     }
 }
 
-/** Renders an already-resolved [ItemInfoResponse]: icon, rarity badge, localized name, and level. */
+/**
+ * Renders an already-resolved [ItemInfoResponse]: icon, rarity badge, localized name, and level.
+ * Clicking it opens a popup with everything else the app knows about the item — full stat list,
+ * slot type, rune-socket count — so any place an item badge shows up (Market's Prices/Craft Cost
+ * tabs, Kamas's ingredient/drop rows) gets a "view detail" affordance for free.
+ */
 @Composable
 internal fun ItemInfoBadge(
     item: ItemInfoResponse,
     lang: Lang,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ItemThumbnail(iconKey = item.iconKey, size = 32.dp)
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                RarityIcon(rarity = item.rarity, size = 12.dp)
-                Text(
-                    text = item.name.localized(lang),
-                    style = WTypography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+    var detailsOpen by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier.clickable { detailsOpen = true },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ItemThumbnail(iconKey = item.iconKey, size = 32.dp)
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    RarityIcon(rarity = item.rarity, size = 12.dp)
+                    Text(
+                        text = item.name.localized(lang),
+                        style = WTypography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(text = "Lvl ${item.level} · #${item.itemId}", style = WTypography.labelSmall.copy(color = WColor.muted))
             }
-            Text(text = "Lvl ${item.level} · #${item.itemId}", style = WTypography.labelSmall.copy(color = WColor.muted))
         }
+        DropdownMenu(expanded = detailsOpen, onDismissRequest = { detailsOpen = false }, containerColor = WColor.surface) {
+            ItemDetailContent(item = item, lang = lang)
+        }
+    }
+}
+
+/** The full "what does this item actually do" panel opened from [ItemInfoBadge]. */
+@Composable
+private fun ItemDetailContent(
+    item: ItemInfoResponse,
+    lang: Lang,
+) {
+    Column(
+        modifier = Modifier.widthIn(min = 200.dp, max = 300.dp).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        item.itemType?.let { itemType ->
+            Text(text = itemType.label(lang), style = WTypography.labelSmall.copy(color = WColor.muted))
+        }
+        item.maxShardSlots?.takeIf { it > 0 }?.let { sockets ->
+            Text(text = "${tr(Tr.RUNE_SOCKETS_LABEL)}: $sockets", style = WTypography.labelSmall.copy(color = WColor.muted))
+        }
+        if (item.characteristics.isEmpty()) {
+            Text(text = tr(Tr.NO_ITEM_STATS), style = WTypography.labelSmall.copy(color = WColor.faint))
+        } else {
+            item.characteristics.entries.sortedBy { it.key.ordinal }.forEach { (characteristic, value) ->
+                ItemStatRow(characteristic = characteristic, value = value, lang = lang)
+            }
+        }
+    }
+}
+
+/** One characteristic's label+value row inside [ItemDetailContent] — mirrors the paperdoll's own
+ * tooltip row (`PaperdollPanel.TooltipStatRow`) so an item's stats look the same everywhere they're
+ * shown, without either screen depending on the other's private composables. */
+@Composable
+private fun ItemStatRow(
+    characteristic: Characteristic,
+    value: Int,
+    lang: Lang,
+) {
+    val color = characteristic.statColor()
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        val iconBitmap = characteristic.iconResourcePath()?.let { rememberClasspathBitmap(it) }
+        if (iconBitmap != null) {
+            Image(
+                bitmap = iconBitmap,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(14.dp)
+            )
+        } else {
+            Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(999.dp)).background(color))
+        }
+        Text(
+            text = if (value > 0) "+$value" else value.toString(),
+            style =
+                WTypography.bodySmall.copy(
+                    fontFamily = WType.mono,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (value < 0) WColor.danger else color
+                )
+        )
+        Text(
+            text = characteristic.label(lang),
+            style = WTypography.bodySmall.copy(color = WColor.muted),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

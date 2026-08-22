@@ -2,8 +2,10 @@ package me.chosante.marketclient
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import me.chosante.common.Characteristic
 import me.chosante.common.HarvestNode
 import me.chosante.common.I18nText
+import me.chosante.common.ItemType
 import me.chosante.common.Monster
 import me.chosante.common.Rarity
 
@@ -91,7 +93,8 @@ data class CraftCostResponse(
 )
 
 // Mirrors market-server's own DTO exactly -- see its doc comment for why the shape is unified
-// across equipment and encyclopedia-sourced (resource/consumable) items.
+// across equipment and encyclopedia-sourced (resource/consumable) items. characteristics/itemType/
+// maxShardSlots are equip-only -- empty/null for non-equipment items.
 @Serializable
 data class ItemInfoResponse(
     val itemId: Int,
@@ -101,6 +104,9 @@ data class ItemInfoResponse(
     val iconKey: Int,
     val category: String,
     val isEquipment: Boolean,
+    val characteristics: Map<Characteristic, Int> = emptyMap(),
+    val itemType: ItemType? = null,
+    val maxShardSlots: Int? = null,
 )
 
 @Serializable
@@ -129,6 +135,7 @@ data class MonsterFarmingOpportunity(
     val monster: Monster,
     val expectedValue: Long? = null,
     val missingDropCount: Int = 0,
+    val totalDropCount: Int = 0,
 )
 
 // phase: "idle" | "capturing" | "processing" | "error" -- mirrors market-server's own DTO exactly.

@@ -3,6 +3,7 @@ package me.chosante.equipmentextractor
 import me.chosante.common.Characteristic
 import me.chosante.common.Equipment
 import me.chosante.common.I18nText
+import me.chosante.common.ItemSummary
 import me.chosante.common.ItemType
 import me.chosante.common.Rarity
 import me.chosante.equipmentextractor.dataretriever.WakfuData
@@ -312,6 +313,52 @@ private fun String.toItemType(): ItemType? =
         // ItemType.id, so a chosen Lucky Charm exports as a pet id that Zenith mis-slots/ignores — accepted,
         // the Zenith integration is already stale.
         "Porte-bonheur" -> ItemType.PETS
+        // Costume/Torche/Outil are real equipment (carry level/rarity/icon) but have no character slot to
+        // fill -- see extractNonCombatItems, which pulls these into ItemSummary instead of Equipment so the
+        // Market/Kamas catalog can still browse them without rippling into the solver's paperdoll model.
         "Costume", "Torche", "Outil", "Poing", "Arme 1 Main", "Arme 2 Mains", "Seconde Main", "WIP" -> null
         else -> throw IllegalStateException("unknown type: $this")
     }
+
+private fun String.toNonCombatItemCategory(): String? =
+    when (this.replace("{[~1]?s:}", "").replace("{[~1]?x:}", "")) {
+        "Costume" -> "costume"
+        "Torche" -> "torch"
+        "Outil" -> "tool"
+        else -> null
+    }
+
+/**
+ * [toItemType] deliberately excludes Costume/Torche/Outil from [Equipment] (no character slot to
+ * fill). They're still real CDN items with a name/level/rarity/icon, so pull them into
+ * [ItemSummary] instead -- a separate pass over [WakfuData.items] rather than folding into
+ * [extractData]'s loop, since none of that function's characteristic/socket/level-restriction logic
+ * applies to them.
+ */
+fun extractNonCombatItems(wakfuData: WakfuData): List<ItemSummary> {
+    val itemTypeIdToCategory = wakfuData.itemTypes.associate { it.definition.id to it.title.fr.toNonCombatItemCategory() }
+    val result = mutableListOf<ItemSummary>()
+    for (equipment in wakfuData.items) {
+        val itemTypeId = equipment.definition.item.baseParameters.itemTypeId
+        val category = itemTypeIdToCategory[itemTypeId] ?: continue
+        val name =
+            equipment.title.let {
+                I18nText(
+                    fr = it.fr.replace("’", "'").replace("‘", "'"),
+                    en = it.en.replace("’", "'").replace("‘", "'"),
+                    pt = it.pt.replace("’", "'").replace("‘", "'"),
+                    es = it.es.replace("’", "'").replace("‘", "'")
+                )
+            }
+        result +=
+            ItemSummary(
+                itemId = equipment.definition.item.id,
+                name = name,
+                level = equipment.definition.item.level,
+                rarity = rarityIdToRarity.getValue(equipment.definition.item.baseParameters.rarity),
+                category = category,
+                iconKey = equipment.definition.item.graphicParameters.gfxId
+            )
+    }
+    return result
+}

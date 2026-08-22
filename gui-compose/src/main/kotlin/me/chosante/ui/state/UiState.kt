@@ -139,13 +139,6 @@ enum class BuilderTab {
 const val MIN_COMPARE_SLOTS = 2
 const val MAX_COMPARE_SLOTS = 4
 
-/** Rows per page for the Market screen's Prices tab -- see [UiState.marketPage]. */
-const val MARKET_PAGE_SIZE = 50
-
-/** Page count for a client-side-paginated list of [totalResults] items, always >= 1 (so an empty
- * result set still reads as "Page 1 / 1" rather than a div-by-zero "Page 1 / 0"). */
-fun marketPageCount(totalResults: Int): Int = if (totalResults == 0) 1 else (totalResults + MARKET_PAGE_SIZE - 1) / MARKET_PAGE_SIZE
-
 /** Ordering options for the build library. See [organizeLibrary]. */
 enum class LibrarySort {
     NEWEST,
@@ -411,12 +404,17 @@ data class UiState(
     /** Every recipe with enough captured price data to score, ranked by ROI -- see `CraftCostService.scanAll`. */
     val craftOpportunities: List<CraftCostResponse> = emptyList(),
     val craftOpportunitiesState: MarketState = MarketState.Idle,
-    /** Every harvest node with enough captured drop-price data, ranked by expected kamas per harvest. */
+    /** 0-indexed current page into [craftOpportunities] (client-side, see [me.chosante.ui.components.LIST_PAGE_SIZE]). */
+    val kamasCraftPage: Int = 0,
+    /** Every harvest node with at least one possible drop, ranked by expected kamas per harvest (nodes with no priced drop sort last). */
     val harvestOpportunities: List<HarvestOpportunity> = emptyList(),
     val harvestOpportunitiesState: MarketState = MarketState.Idle,
-    /** Every monster with a known drop table and enough captured price data, ranked by expected kamas per kill. */
+    val kamasHarvestPage: Int = 0,
+    /** Every monster in the game (not just ones with a known drop table -- see `MonsterDropCatalog`'s
+     * doc comment), ranked by expected kamas per kill; monsters with no known/priced drops sort last. */
     val monsterFarmingOpportunities: List<MonsterFarmingOpportunity> = emptyList(),
     val monsterFarmingOpportunitiesState: MarketState = MarketState.Idle,
+    val kamasMonsterPage: Int = 0,
 )
 
 /**

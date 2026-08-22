@@ -179,7 +179,10 @@ fun AppShell(
                             KamasScreen(
                                 ui = ui,
                                 onSelectTab = model::setKamasTab,
-                                onRequestItemInfo = model::ensureItemInfoLoaded
+                                onRequestItemInfo = model::ensureItemInfoLoaded,
+                                onSetCraftPage = model::setKamasCraftPage,
+                                onSetHarvestPage = model::setKamasHarvestPage,
+                                onSetMonsterPage = model::setKamasMonsterPage
                             )
                     }
                 }

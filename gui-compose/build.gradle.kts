@@ -168,8 +168,9 @@ tasks.register("generateAssets") {
         demand; the resulting PNGs are committed. Pass -Pwakfu.install=<path> (default /Applications/Ankama/Wakfu).
 
         It converts these sets into src/main/resources/assets (TGA -> PNG):
-          - items/     filtered to the guiIds referenced by the current equipments JSON (also covers rune items)
-                       and the iconKeys referenced by harvest-nodes.json (harvest-extractor)
+          - items/     filtered to the guiIds referenced by the current equipments JSON (also covers rune items),
+                       the iconKeys referenced by harvest-nodes.json (harvest-extractor), and the iconKeys
+                       referenced by equipment-adjacent-items.json (equipments-extractor's costume/torch/tool)
           - spells/    filtered to the iconIds/gfxIds referenced by the current spells + passives JSON
           - states/    filtered to the appliedStateIds referenced by the passives JSON (buff/state icons)
           - breeds/    class artwork keyed by CharacterClass.breedId — icon/, illustration/ (male), background/
@@ -210,6 +211,20 @@ tasks.register("generateAssets") {
                 ?.let {
                     val nodes = groovy.json.JsonSlurper().parseText(it.readText()) as List<Map<String, Any>>
                     nodes.map { node -> (node["iconKey"] as Int).toString() }.toSet()
+                } ?: emptySet()
+
+        // iconKeys referenced by equipment-adjacent-items.json (equipments-extractor) -- Costume/Torch/
+        // Tool items are real CDN equipment (EquipmentExtractor.extractNonCombatItems) excluded from
+        // equipments.json only because they fill no character slot, so their icons live in the same
+        // icons/items/64 gui.jar set as ordinary equipment.
+        @Suppress("UNCHECKED_CAST")
+        val iconKeysFromEquipmentAdjacentItemsJson =
+            rootProject.projectDir
+                .resolve("autobuilder/src/main/resources/equipment-adjacent-items.json")
+                .takeIf { it.isFile }
+                ?.let {
+                    val items = groovy.json.JsonSlurper().parseText(it.readText()) as List<Map<String, Any>>
+                    items.map { item -> (item["iconKey"] as Int).toString() }.toSet()
                 } ?: emptySet()
 
         // spell icon gfxIds + passive-applied state ids referenced by the current spell datasets.
@@ -263,7 +278,11 @@ tasks.register("generateAssets") {
                 logger.lifecycle("generateAssets: $category -> $copied file(s) from gui.jar")
             }
 
-            extract("items", "icons/items/64", guiIdsFromCurrentEquipmentJson + iconKeysFromHarvestNodesJson) // also covers runes (item shards)
+            extract(
+                "items",
+                "icons/items/64",
+                guiIdsFromCurrentEquipmentJson + iconKeysFromHarvestNodesJson + iconKeysFromEquipmentAdjacentItemsJson
+            ) // also covers runes (item shards)
             extract("spells", "icons/spells/64", spellIconIds + passiveGfxIds)
             extract("states", "icons/states", passiveStateIds)
 

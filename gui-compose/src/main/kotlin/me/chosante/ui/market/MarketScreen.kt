@@ -44,24 +44,25 @@ import me.chosante.ui.components.Hairline
 import me.chosante.ui.components.InfoTip
 import me.chosante.ui.components.ItemBadge
 import me.chosante.ui.components.ItemInfoBadge
+import me.chosante.ui.components.LIST_PAGE_SIZE
 import me.chosante.ui.components.MessageCard
+import me.chosante.ui.components.PageControls
 import me.chosante.ui.components.RarityIcon
 import me.chosante.ui.components.SmallButton
 import me.chosante.ui.components.SmallTextField
 import me.chosante.ui.components.StatLine
 import me.chosante.ui.components.TabButton
+import me.chosante.ui.components.pageCount
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.Tr
 import me.chosante.ui.i18n.categoryLabel
 import me.chosante.ui.i18n.craftDecisionLabel
 import me.chosante.ui.i18n.label
 import me.chosante.ui.i18n.tr
-import me.chosante.ui.state.MARKET_PAGE_SIZE
 import me.chosante.ui.state.MarketState
 import me.chosante.ui.state.MarketTab
 import me.chosante.ui.state.UiState
 import me.chosante.ui.state.color
-import me.chosante.ui.state.marketPageCount
 import me.chosante.ui.theme.WColor
 import me.chosante.ui.theme.WDimens
 import me.chosante.ui.theme.WTypography
@@ -193,17 +194,17 @@ private fun PricesTab(
             onToggleCategory = onToggleCategoryFilter
         )
         Spacer(modifier = Modifier.height(10.dp))
-        val pageCount = marketPageCount(ui.marketSearchResults.size)
+        val totalPages = pageCount(ui.marketSearchResults.size)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             if (ui.marketSearchResults.isNotEmpty()) {
-                PageControls(page = ui.marketPage, pageCount = pageCount, onSetPage = onSetPage)
+                PageControls(page = ui.marketPage, pageCount = totalPages, onSetPage = onSetPage)
             } else {
                 Spacer(modifier = Modifier)
             }
             SmallButton(text = tr(Tr.EXPORT_CSV_BUTTON), onClick = onExportCsv)
         }
         Spacer(modifier = Modifier.height(4.dp))
-        val pagedResults = remember(ui.marketSearchResults, ui.marketPage) { ui.marketSearchResults.chunked(MARKET_PAGE_SIZE).getOrElse(ui.marketPage) { emptyList() } }
+        val pagedResults = remember(ui.marketSearchResults, ui.marketPage) { ui.marketSearchResults.chunked(LIST_PAGE_SIZE).getOrElse(ui.marketPage) { emptyList() } }
         when {
             // A background refresh (e.g. after saving a price) failing must never blank out an
             // already-good list -- prefer showing what's still on screen over an error card, even
@@ -238,22 +239,8 @@ private fun PricesTab(
     }
 }
 
-/** Previous/Next + "Page X / Y", client-side over the already-fetched full filtered set (see
- * BuildSearchModel.FULL_CATALOG_LIMIT / UiState.marketPage). */
-@Composable
-private fun PageControls(
-    page: Int,
-    pageCount: Int,
-    onSetPage: (Int) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SmallButton(text = tr(Tr.PREVIOUS_PAGE), onClick = { onSetPage(page - 1) }, enabled = page > 0)
-        Text(text = tr(Tr.PAGE_LABEL).format(page + 1, pageCount), style = WTypography.labelMedium.copy(color = WColor.muted))
-        SmallButton(text = tr(Tr.NEXT_PAGE), onClick = { onSetPage(page + 1) }, enabled = page < pageCount - 1)
-    }
-}
-
-private val MARKET_CATEGORIES = listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous", "sublimation")
+private val MARKET_CATEGORIES =
+    listOf("equipment", "creature", "resource", "consumable", "customization", "miscellaneous", "sublimation", "torch", "tool", "costume")
 
 @Composable
 private fun MarketSearchBar(

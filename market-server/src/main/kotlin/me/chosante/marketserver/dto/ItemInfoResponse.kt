@@ -1,15 +1,18 @@
 package me.chosante.marketserver.dto
 
 import kotlinx.serialization.Serializable
+import me.chosante.common.Characteristic
 import me.chosante.common.I18nText
+import me.chosante.common.ItemType
 import me.chosante.common.Rarity
 
 /**
  * Unified item display info for the Market screen -- covers both [me.chosante.common.Equipment]
  * (the solver's full 14-slot gear catalog) and [me.chosante.common.ItemSummary] (resources/
- * consumables from the encyclopedia) behind one shape, since the GUI only ever needs
- * name/level/rarity/icon to render an item badge, never the full equip-only fields (characteristics,
- * itemType, shard slots). [iconKey] indexes `assets/items/<iconKey>.png` in gui-compose either way.
+ * consumables from the encyclopedia) behind one shape. [iconKey] indexes
+ * `assets/items/<iconKey>.png` in gui-compose either way. [characteristics]/[itemType]/
+ * [maxShardSlots] are equip-only -- empty/null for non-equipment items -- and exist so an item's
+ * "view detail" surface can show what it actually does, not just name/level/rarity/price.
  */
 @Serializable
 data class ItemInfoResponse(
@@ -20,6 +23,9 @@ data class ItemInfoResponse(
     val iconKey: Int,
     val category: String,
     val isEquipment: Boolean,
+    val characteristics: Map<Characteristic, Int> = emptyMap(),
+    val itemType: ItemType? = null,
+    val maxShardSlots: Int? = null,
 )
 
 /**

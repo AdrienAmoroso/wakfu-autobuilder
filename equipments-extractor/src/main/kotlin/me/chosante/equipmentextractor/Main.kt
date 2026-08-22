@@ -3,6 +3,7 @@ package me.chosante.equipmentextractor
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import me.chosante.common.Equipment
+import me.chosante.common.ItemSummary
 import me.chosante.common.WakfuData
 import me.chosante.common.findRepositoryRoot
 import me.chosante.equipmentextractor.dataretriever.getWakfuRawData
@@ -17,10 +18,15 @@ suspend fun main() {
     println("Using pinned Wakfu data version (common-lib WakfuData.VERSION): $version")
     val wakfuRawData = getWakfuRawData(version)
     val equipments = extractData(wakfuRawData)
+    val nonCombatItems = extractNonCombatItems(wakfuRawData)
     val repositoryRoot = findRepositoryRoot()
     val outputDirectory = File(repositoryRoot, "autobuilder/src/main/resources").apply { mkdirs() }
 
     File(outputDirectory, "equipments.json")
         .writeText(Json.encodeToString(ListSerializer(Equipment.serializer()), equipments))
     println("Wrote ${equipments.size} equipments -> equipments.json (data version $version)")
+
+    File(outputDirectory, "equipment-adjacent-items.json")
+        .writeText(Json.encodeToString(ListSerializer(ItemSummary.serializer()), nonCombatItems))
+    println("Wrote ${nonCombatItems.size} equipment-adjacent items (costume/torch/tool) -> equipment-adjacent-items.json")
 }

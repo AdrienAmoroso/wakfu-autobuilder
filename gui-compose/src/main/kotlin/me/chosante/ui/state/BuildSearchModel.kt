@@ -48,6 +48,7 @@ import me.chosante.marketclient.MarketRepository
 import me.chosante.marketclient.UpdatePricesRequest
 import me.chosante.ui.components.BreedAssets
 import me.chosante.ui.components.IconPreloader
+import me.chosante.ui.components.pageCount
 import me.chosante.ui.components.promptSaveCsvFile
 import me.chosante.ui.components.toCsv
 import me.chosante.ui.components.warmUpPaths
@@ -121,11 +122,13 @@ internal fun expandGlobalResistance(targets: List<TargetStat>): List<TargetStat>
     } + perElement
 }
 
-// Comfortably covers the ~10,400-item catalog (equipment + resources/consumables/cosmetics/misc +
-// sublimations) -- matches market-server's own MAX_SEARCH_LIMIT. Used both by the CSV export and by
-// every *filtered* Prices-tab search (see runMarketSearch): the Market screen is meant to browse the
-// whole HDV, so a category/name/rarity filter must return every match, not a level-sorted slice cut
-// off long before most of the catalog is reached.
+// Comfortably covers the largest catalog this app queries in one call -- the ~10,400-item Market
+// catalog (equipment + resources/consumables/cosmetics/misc + sublimations, matches market-server's
+// own MAX_SEARCH_LIMIT) and, reused for the Kamas screen's three scans, the 2846-monster catalog
+// (server-clamped to its own smaller MAX_SCAN_LIMIT regardless, so requesting this much is always
+// safe). Used by the CSV export and every *filtered* Prices-tab search, and by every Kamas scan: all
+// of these screens are meant to browse the whole game's data, so a filter must return every match,
+// not a slice cut off long before most of the catalog is reached.
 private const val FULL_CATALOG_LIMIT = 20_000
 
 private fun itemsToCsv(results: List<ItemSearchResult>): String {
@@ -1387,9 +1390,26 @@ class BuildSearchModel(
     /** Client-side pagination over the already-fetched [UiState.marketSearchResults] -- clamped so a
      * stale page number (e.g. from a filter that just shrank the result count) can't go out of bounds. */
     fun setMarketPage(page: Int) {
-        val pageCount = marketPageCount(ui.marketSearchResults.size)
-        ui = ui.copy(marketPage = page.coerceIn(0, (pageCount - 1).coerceAtLeast(0)))
+        ui = ui.copy(marketPage = clampedPage(page, ui.marketSearchResults.size))
     }
+
+    /** Same clamped client-side pagination as [setMarketPage], for the Kamas screen's three tabs. */
+    fun setKamasCraftPage(page: Int) {
+        ui = ui.copy(kamasCraftPage = clampedPage(page, ui.craftOpportunities.size))
+    }
+
+    fun setKamasHarvestPage(page: Int) {
+        ui = ui.copy(kamasHarvestPage = clampedPage(page, ui.harvestOpportunities.size))
+    }
+
+    fun setKamasMonsterPage(page: Int) {
+        ui = ui.copy(kamasMonsterPage = clampedPage(page, ui.monsterFarmingOpportunities.size))
+    }
+
+    private fun clampedPage(
+        page: Int,
+        totalResults: Int,
+    ): Int = page.coerceIn(0, (pageCount(totalResults) - 1).coerceAtLeast(0))
 
     /** Debounced (300ms) live search triggered by every filter edit above. */
     private fun scheduleMarketSearch() {
@@ -1606,9 +1626,9 @@ class BuildSearchModel(
         ui = ui.copy(craftOpportunitiesState = MarketState.Loading, error = null)
         scope.launch(Dispatchers.Default) {
             try {
-                val results = marketRepository.craftOpportunities()
+                val results = marketRepository.craftOpportunities(limit = FULL_CATALOG_LIMIT)
                 withContext(mainDispatcher) {
-                    ui = ui.copy(craftOpportunities = results, craftOpportunitiesState = MarketState.Ready)
+                    ui = ui.copy(craftOpportunities = results, craftOpportunitiesState = MarketState.Ready, kamasCraftPage = 0)
                 }
             } catch (exception: Exception) {
                 withContext(mainDispatcher) {
@@ -1623,9 +1643,9 @@ class BuildSearchModel(
         ui = ui.copy(harvestOpportunitiesState = MarketState.Loading, error = null)
         scope.launch(Dispatchers.Default) {
             try {
-                val results = marketRepository.harvestOpportunities()
+                val results = marketRepository.harvestOpportunities(limit = FULL_CATALOG_LIMIT)
                 withContext(mainDispatcher) {
-                    ui = ui.copy(harvestOpportunities = results, harvestOpportunitiesState = MarketState.Ready)
+                    ui = ui.copy(harvestOpportunities = results, harvestOpportunitiesState = MarketState.Ready, kamasHarvestPage = 0)
                 }
             } catch (exception: Exception) {
                 withContext(mainDispatcher) {
@@ -1640,9 +1660,9 @@ class BuildSearchModel(
         ui = ui.copy(monsterFarmingOpportunitiesState = MarketState.Loading, error = null)
         scope.launch(Dispatchers.Default) {
             try {
-                val results = marketRepository.monsterFarmingOpportunities()
+                val results = marketRepository.monsterFarmingOpportunities(limit = FULL_CATALOG_LIMIT)
                 withContext(mainDispatcher) {
-                    ui = ui.copy(monsterFarmingOpportunities = results, monsterFarmingOpportunitiesState = MarketState.Ready)
+                    ui = ui.copy(monsterFarmingOpportunities = results, monsterFarmingOpportunitiesState = MarketState.Ready, kamasMonsterPage = 0)
                 }
             } catch (exception: Exception) {
                 withContext(mainDispatcher) {

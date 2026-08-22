@@ -6,8 +6,9 @@ import org.jetbrains.exposed.v1.jdbc.Database
 
 object MonsterFarmingService {
     /**
-     * Ranks every monster with a known drop table by expected kamas per kill -- the Kamas screen's
-     * Monster Farming tab. One batched price lookup across every monster's drops.
+     * Ranks every monster in the game (not just ones with a known drop table -- see
+     * `MonsterDropCatalog`'s doc comment) by expected kamas per kill, monsters with no known drops
+     * sorted last. One batched price lookup across every monster's drops.
      */
     fun scanAll(
         db: Database,
@@ -25,11 +26,16 @@ object MonsterFarmingService {
 
         return entries
             .asSequence()
-            .map { (monster, loot) -> monster to expectedDropValue(loot.drops, prices) }
-            .sortedWith(compareByDescending { it.second.value ?: -1L })
+            .map { (monster, loot) -> Triple(monster, loot.drops.size, expectedDropValue(loot.drops, prices)) }
+            .sortedWith(compareByDescending { it.third.value ?: -1L })
             .take(limit)
-            .map { (monster, expected) ->
-                MonsterFarmingOpportunity(monster = monster, expectedValue = expected.value, missingDropCount = expected.missingDropCount)
+            .map { (monster, totalDropCount, expected) ->
+                MonsterFarmingOpportunity(
+                    monster = monster,
+                    expectedValue = expected.value,
+                    missingDropCount = expected.missingDropCount,
+                    totalDropCount = totalDropCount
+                )
             }.toList()
     }
 }
