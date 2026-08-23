@@ -303,7 +303,10 @@ private fun ItemDetailContent(
         item.maxShardSlots?.takeIf { it > 0 }?.let { sockets ->
             Text(text = "${tr(Tr.RUNE_SOCKETS_LABEL)}: $sockets", style = WTypography.labelSmall.copy(color = WColor.muted))
         }
-        if (item.characteristics.isEmpty()) {
+        item.sublimation?.let { sub ->
+            Text(text = sublimationEffectText(sub, lang), style = WTypography.bodySmall.copy(color = WColor.muted))
+        }
+        if (item.characteristics.isEmpty() && item.sublimation == null) {
             Text(text = tr(Tr.NO_ITEM_STATS), style = WTypography.labelSmall.copy(color = WColor.faint))
         } else {
             item.characteristics.entries.sortedBy { it.key.ordinal }.forEach { (characteristic, value) ->

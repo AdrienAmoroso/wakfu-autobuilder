@@ -60,23 +60,41 @@ fun extractHarvestNodes(data: WakfuHarvestData): List<HarvestNode> {
  * sublimation's 0 is) and `rarity = COMMON` (a safe inference here, unlike sublimations which
  * genuinely span every tier: raw harvestable materials are near-universally Common tier by Wakfu's
  * own conventions).
+ *
+ * Same multi-stage disambiguation as [extractHarvestNodes] -- one node's several growth stages can
+ * yield genuinely different [collectItemId]s, so the stage count is computed AFTER the
+ * [distinctBy] dedup, per source node, not reused from [extractHarvestNodes]'s raw per-node stage
+ * count (a different thing: that counts EVERY collectible row per node, this counts only the ones
+ * that survived dedup to a distinct item). Skipping this step was a real regression this session:
+ * 428/434 (98.6%) harvest materials shared an ambiguous bare node name (e.g. three different real
+ * items all displaying as "Iced Cranberry") before this fix.
+ *
+ * [resourceIndex] alone doesn't ALWAYS disambiguate, though: confirmed against the live CDN feed,
+ * two rows can share both [resourceId] and [resourceIndex] yet still yield different
+ * [collectItemId]s (e.g. resourceId 763, resourceIndex 3 has both collectItemId 27851 and 27852 --
+ * different `collectLootListId`/`visualFeedbackId`, likely an alternate harvest outcome at the same
+ * stage rather than a distinct growth stage). Rather than model that extra dimension, any name that
+ * still collides after stage-suffixing falls back to appending the item's own id -- guarantees no
+ * two distinct items ever share a display name, by construction.
  */
 fun extractHarvestMaterials(data: WakfuHarvestData): List<ItemSummary> {
     val nodesById = data.resourceNodes.associateBy { it.definition.id }
-    return data.collectibleResources
-        .filter { it.collectItemId != 0 }
-        .distinctBy { it.collectItemId }
-        .mapNotNull { collectible ->
+    val distinctCollectibles = data.collectibleResources.filter { it.collectItemId != 0 }.distinctBy { it.collectItemId }
+    val stagesPerResource = distinctCollectibles.groupBy { it.resourceId }.mapValues { it.value.size }
+
+    val provisional =
+        distinctCollectibles.mapNotNull { collectible ->
             val node = nodesById[collectible.resourceId] ?: return@mapNotNull null
-            ItemSummary(
-                itemId = collectible.collectItemId,
-                name = node.title,
-                level = 0,
-                rarity = Rarity.COMMON,
-                category = "harvest-material",
-                iconKey = node.definition.iconGfxId
-            )
+            val hasMultipleStages = (stagesPerResource[collectible.resourceId] ?: 1) > 1
+            val name = if (hasMultipleStages) node.title.withStageSuffix(collectible.resourceIndex) else node.title
+            Triple(collectible.collectItemId, name, node.definition.iconGfxId)
         }
+
+    val nameCounts = provisional.groupingBy { it.second.en }.eachCount()
+    return provisional.map { (itemId, name, iconKey) ->
+        val finalName = if ((nameCounts[name.en] ?: 0) > 1) name.withIdSuffix(itemId) else name
+        ItemSummary(itemId = itemId, name = finalName, level = 0, rarity = Rarity.COMMON, category = "harvest-material", iconKey = iconKey)
+    }
 }
 
 private fun I18nText.withStageSuffix(stage: Int) =
@@ -86,3 +104,5 @@ private fun I18nText.withStageSuffix(stage: Int) =
         es = "$es (etapa $stage)",
         pt = "$pt (estágio $stage)"
     )
+
+private fun I18nText.withIdSuffix(id: Int) = I18nText(fr = "$fr #$id", en = "$en #$id", es = "$es #$id", pt = "$pt #$id")

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import me.chosante.marketclient.CraftCostResponse
 import me.chosante.marketclient.DropInfo
 import me.chosante.marketclient.HarvestOpportunity
+import me.chosante.marketclient.IngredientCost
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.MonsterFarmingOpportunity
 import me.chosante.ui.components.BossResistanceChips
@@ -142,6 +143,7 @@ private fun CraftingTab(
                         CraftOpportunityRow(
                             opportunity = opportunity,
                             item = ui.itemInfoCache[opportunity.itemId],
+                            itemInfo = ui.itemInfoCache,
                             lang = ui.lang,
                             onRequestItemInfo = onRequestItemInfo
                         )
@@ -161,48 +163,98 @@ private fun CraftingTab(
 private fun CraftOpportunityRow(
     opportunity: CraftCostResponse,
     item: ItemInfoResponse?,
+    itemInfo: Map<Int, ItemInfoResponse>,
     lang: Lang,
     onRequestItemInfo: (Int) -> Unit,
 ) {
     val decisionColor = if (opportunity.decision == "craft") WColor.success else WColor.muted
-    Row(
+    var expanded by remember { mutableStateOf(false) }
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(9.dp))
                 .background(WColor.surface)
-                .border(1.dp, WColor.hairline, RoundedCornerShape(9.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .border(1.dp, if (expanded) WColor.accent else WColor.hairline, RoundedCornerShape(9.dp))
     ) {
-        Column(modifier = Modifier.widthIn(min = 220.dp)) {
-            ItemBadge(itemId = opportunity.itemId, item = item, lang = lang, onRequestItemInfo = onRequestItemInfo)
-            Text(
-                text = tr(Tr.CRAFT_JOB_LABEL).format(opportunity.jobName.localized(lang)),
-                style = WTypography.labelSmall.copy(color = WColor.muted)
-            )
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = opportunity.ingredients.isNotEmpty()) { expanded = !expanded }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(modifier = Modifier.widthIn(min = 220.dp)) {
+                ItemBadge(itemId = opportunity.itemId, item = item, lang = lang, onRequestItemInfo = onRequestItemInfo)
+                Text(
+                    text = tr(Tr.CRAFT_JOB_LABEL).format(opportunity.jobName.localized(lang)),
+                    style = WTypography.labelSmall.copy(color = WColor.muted)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                StatLine(
+                    tr(Tr.ROI_LABEL),
+                    opportunity.roi?.let { "${(it * 100).toInt()}%" } ?: "—",
+                    hint = tr(Tr.ROI_HINT)
+                )
+                StatLine(tr(Tr.NET_MARGIN), opportunity.netMargin?.toString() ?: "—", hint = tr(Tr.NET_MARGIN_HINT))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                StatLine(tr(Tr.CRAFT_COST_LABEL), opportunity.craftCost.toString(), hint = tr(Tr.CRAFT_COST_HINT))
+                StatLine(tr(Tr.MARKET_PRICE_LABEL), opportunity.marketPrice?.toString() ?: "—")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = craftDecisionLabel(opportunity.decision, lang),
+                    style = WTypography.labelMedium.copy(color = decisionColor),
+                    fontWeight = FontWeight.Bold
+                )
+                InfoTip(text = tr(Tr.CRAFT_DECISION_HINT))
+            }
+            if (opportunity.ingredients.isNotEmpty()) {
+                Text(text = if (expanded) "▲" else "▼", style = WTypography.labelMedium.copy(color = WColor.muted))
+            }
         }
-        Column(modifier = Modifier.weight(1f)) {
-            StatLine(
-                tr(Tr.ROI_LABEL),
-                opportunity.roi?.let { "${(it * 100).toInt()}%" } ?: "—",
-                hint = tr(Tr.ROI_HINT)
-            )
-            StatLine(tr(Tr.NET_MARGIN), opportunity.netMargin?.toString() ?: "—", hint = tr(Tr.NET_MARGIN_HINT))
+        if (expanded) {
+            Hairline()
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = tr(Tr.INGREDIENTS_TITLE), style = WTypography.titleMedium)
+                opportunity.ingredients.forEach { ingredient ->
+                    IngredientRow(ingredient = ingredient, itemInfo = itemInfo, lang = lang, onRequestItemInfo = onRequestItemInfo)
+                }
+            }
         }
-        Column(modifier = Modifier.weight(1f)) {
-            StatLine(tr(Tr.CRAFT_COST_LABEL), opportunity.craftCost.toString(), hint = tr(Tr.CRAFT_COST_HINT))
-            StatLine(tr(Tr.MARKET_PRICE_LABEL), opportunity.marketPrice?.toString() ?: "—")
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = craftDecisionLabel(opportunity.decision, lang),
-                style = WTypography.labelMedium.copy(color = decisionColor),
-                fontWeight = FontWeight.Bold
-            )
-            InfoTip(text = tr(Tr.CRAFT_DECISION_HINT))
-        }
+    }
+}
+
+/** One recipe ingredient inside an expanded [CraftOpportunityRow] -- mirrors [DropRow]/`CraftCostResultCard`'s
+ * ingredient rows in `MarketScreen.kt`, so recipe details no longer require switching to the Market
+ * screen's Craft Cost search. */
+@Composable
+private fun IngredientRow(
+    ingredient: IngredientCost,
+    itemInfo: Map<Int, ItemInfoResponse>,
+    lang: Lang,
+    onRequestItemInfo: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ItemBadge(
+            itemId = ingredient.itemId,
+            item = itemInfo[ingredient.itemId],
+            lang = lang,
+            onRequestItemInfo = onRequestItemInfo,
+            modifier = Modifier.widthIn(min = 200.dp)
+        )
+        Text(
+            text = tr(Tr.INGREDIENT_QUANTITY_SUBTOTAL).format(ingredient.quantity, ingredient.subtotal?.toString() ?: tr(Tr.NO_PRICE_SHORT)),
+            style = WTypography.bodySmall.copy(color = WColor.muted)
+        )
     }
 }
 

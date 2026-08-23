@@ -2,9 +2,14 @@ package me.chosante.itemsextractor
 
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
+import me.chosante.common.Equipment
 import me.chosante.common.I18nText
 import me.chosante.common.ItemSummary
+import me.chosante.common.MonsterLoot
 import me.chosante.common.Rarity
+import me.chosante.common.Recipe
+import me.chosante.common.Sublimation
 import me.chosante.common.findRepositoryRoot
 import java.io.File
 
@@ -27,7 +32,7 @@ private val CATEGORIES =
         CategoryRef("miscellaneous", "miscellaneous", "divers")
     )
 
-private val rarityIndexToRarity =
+internal val rarityIndexToRarity =
     mapOf(
         0 to Rarity.COMMON,
         1 to Rarity.UNCOMMON,
@@ -39,6 +44,20 @@ private val rarityIndexToRarity =
         7 to Rarity.EPIC
     )
 
+private val json = Json { ignoreUnknownKeys = true }
+
+/** Reads an already-committed sibling resource file straight off disk -- same cross-module JSON
+ * pattern `gui-compose`'s `generateAssets` task already uses, not a project dependency. Missing
+ * files (a module that hasn't run yet) degrade to an empty list rather than failing the whole crawl. */
+private inline fun <reified T> readCommittedJson(
+    resourcesDir: File,
+    fileName: String,
+): List<T> {
+    val file = File(resourcesDir, fileName)
+    if (!file.isFile) return emptyList()
+    return json.decodeFromString(ListSerializer(serializer<T>()), file.readText())
+}
+
 /**
  * Builds two files by crawling Ankama's public encyclopedia (no CDN gamedata feed covers either):
  * - `autobuilder/src/main/resources/resource-items.json`: the item categories [ItemSummary] exists
@@ -46,7 +65,9 @@ private val rarityIndexToRarity =
  *   equipment-style CDN feed (see `ItemSummary`'s doc comment and this module's research trail for
  *   why). Also downloads
  *   each item's hosted icon straight into `gui-compose/src/main/resources/assets/items/<itemId>.png`,
- *   and (see [crawlItemDescriptions]) each item's flavor-text description off its own detail page.
+ *   each item's flavor-text description off its own detail page (see [crawlItemDescription]), and
+ *   (see [crawlUnknownItemsById]) recovers items still missing after that -- referenced by
+ *   `recipes.json`/`monster-drops.json` but excluded from every category's own listing pages.
  * - `autobuilder/src/main/resources/monster-drops.json`: every listed monster's drop table -- see
  *   `MonsterDropCrawler.kt`.
  *
@@ -139,6 +160,29 @@ suspend fun main() {
                 if (skippedRarity > 0) ", $skippedRarity skipped (unknown rarity)" else ""
         )
     }
+
+    // Recover items excluded from every category's own listing pages -- see
+    // crawlUnknownItemsById's doc comment. Candidate ids come from already-committed sibling
+    // resource files (recipes.json's crafted outputs + ingredients, monster-drops.json's drops),
+    // read straight off disk.
+    val autobuilderResources = File(repoRoot, "autobuilder/src/main/resources")
+    val knownIds =
+        (
+            readCommittedJson<Equipment>(autobuilderResources, "equipments.json").map { it.equipmentId } +
+                readCommittedJson<Sublimation>(autobuilderResources, "sublimations.json").map { it.zenithId } +
+                readCommittedJson<ItemSummary>(autobuilderResources, "equipment-adjacent-items.json").map { it.itemId } +
+                readCommittedJson<ItemSummary>(autobuilderResources, "harvest-materials.json").map { it.itemId } +
+                allItems.map { it.itemId }
+        ).toSet()
+    val referencedIds =
+        readCommittedJson<Recipe>(autobuilderResources, "recipes.json")
+            .flatMapTo(mutableSetOf()) { r -> listOf(r.itemId) + r.ingredients.map { it.itemId } } +
+            readCommittedJson<MonsterLoot>(autobuilderResources, "monster-drops.json")
+                .flatMapTo(mutableSetOf()) { loot -> loot.drops.map { it.itemId } }
+    val stillUnknown = referencedIds - knownIds
+
+    println("\nRecovering ${stillUnknown.size} still-unknown item id(s) by direct detail-page fetch…")
+    allItems += crawlUnknownItemsById(client, stillUnknown, iconsDir)
 
     val outputDir = File(repoRoot, "autobuilder/src/main/resources").apply { mkdirs() }
     val outputFile = File(outputDir, "resource-items.json")

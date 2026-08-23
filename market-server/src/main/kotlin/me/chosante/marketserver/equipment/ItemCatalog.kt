@@ -170,5 +170,6 @@ private fun Sublimation.toItemInfoResponse() =
         rarity = gameRarity,
         iconKey = zenithId,
         category = "sublimation",
-        isEquipment = false
+        isEquipment = false,
+        sublimation = this
     )

@@ -8,6 +8,7 @@ import me.chosante.common.I18nText
 import me.chosante.common.ItemType
 import me.chosante.common.Monster
 import me.chosante.common.Rarity
+import me.chosante.common.Sublimation
 
 @Serializable
 data class ObservationResponse(
@@ -121,6 +122,7 @@ data class ItemInfoResponse(
     val itemType: ItemType? = null,
     val maxShardSlots: Int? = null,
     val description: I18nText? = null,
+    val sublimation: Sublimation? = null,
 )
 
 @Serializable

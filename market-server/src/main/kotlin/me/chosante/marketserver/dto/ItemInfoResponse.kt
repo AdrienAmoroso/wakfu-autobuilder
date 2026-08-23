@@ -5,6 +5,7 @@ import me.chosante.common.Characteristic
 import me.chosante.common.I18nText
 import me.chosante.common.ItemType
 import me.chosante.common.Rarity
+import me.chosante.common.Sublimation
 
 /**
  * Unified item display info for the Market screen -- covers both [me.chosante.common.Equipment]
@@ -30,6 +31,11 @@ data class ItemInfoResponse(
      * sources that don't crawl detail pages (equipment, sublimations, harvest materials) or when
      * the item genuinely has none. */
     val description: I18nText? = null,
+    /** Set only for sublimation items -- the whole domain object, not just its display fields, so
+     * the item-detail popup can render its real effect text via the GUI's existing
+     * `sublimationEffectText(sub, lang)` (the same formatter the sublimation picker and paperdoll
+     * tooltip already use) instead of showing nothing useful. */
+    val sublimation: Sublimation? = null,
 )
 
 /**
