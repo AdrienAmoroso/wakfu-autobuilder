@@ -245,11 +245,14 @@ sealed interface Modal {
 }
 
 data class UiState(
+    // --- Shared identity ("who this build is for" -- one concept across the Builder AND Manual
+    // screens; see [manualBuild]'s doc comment below) ---
     val lang: Lang = Lang.EN,
     val clazz: CharacterClass = CharacterClass.CRA,
     val level: Int = 110,
     /** Lower item-level bound for the search; 0 = no minimum (consider every item up to [level]). */
     val minLevel: Int = 0,
+    // --- Search (Screen.Builder's request + result; see BuildSearchModelSearch.kt) ---
     val mode: ScoreComputationMode = ScoreComputationMode.FIND_BUILD_WITH_MOST_MASTERIES_FROM_INPUT,
     // Attack scenario for the max-damage mode (ignored by the other modes).
     val scenario: DamageScenario = DamageScenario(),
@@ -331,7 +334,8 @@ data class UiState(
     /** Display name of the loaded build, shown in the workspace; `null` ⇒ "unsaved build". */
     val activeBuildName: String? = null,
     /**
-     * [Screen.ManualBuild]'s own build-in-progress -- deliberately independent of [build]/[achieved]/
+     * Manual build (Screen.ManualBuild; see BuildSearchModelManual.kt). [Screen.ManualBuild]'s own
+     * build-in-progress -- deliberately independent of [build]/[achieved]/
      * [zenith]/[zenithUrl]/[activeBuildId]/[activeBuildName] above, so the auto-search Builder and the
      * manual construction screen never clobber each other's state. `clazz`/`level`/`minLevel` stay
      * *shared* top-level fields ("who this build is for" is one concept across both modes).

@@ -46,6 +46,13 @@ import me.chosante.ui.paperdoll.slotAssignments
 import me.chosante.ui.state.BuildSearchModel
 import me.chosante.ui.state.UiState
 import me.chosante.ui.state.color
+import me.chosante.ui.state.equipItemInManualSlot
+import me.chosante.ui.state.resetManualItemFilters
+import me.chosante.ui.state.setManualItemMaxLevel
+import me.chosante.ui.state.setManualItemMinLevel
+import me.chosante.ui.state.setManualItemQuery
+import me.chosante.ui.state.toggleManualItemRarity
+import me.chosante.ui.state.toggleManualItemType
 import me.chosante.ui.theme.WColor
 import me.chosante.ui.theme.WDimens
 import me.chosante.ui.theme.WType

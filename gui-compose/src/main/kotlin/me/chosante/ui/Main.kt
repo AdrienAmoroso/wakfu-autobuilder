@@ -35,6 +35,7 @@ import me.chosante.ui.shell.AppShell
 import me.chosante.ui.shell.LoadingScreen
 import me.chosante.ui.state.BuildSearchModel
 import me.chosante.ui.state.WhatsNew
+import me.chosante.ui.state.dismissRequestErrors
 import me.chosante.ui.testing.ScreenshotCapture
 import me.chosante.ui.theme.WTheme
 import java.awt.Desktop
