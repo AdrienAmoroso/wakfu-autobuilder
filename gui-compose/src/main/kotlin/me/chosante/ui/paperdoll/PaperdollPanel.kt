@@ -10,6 +10,7 @@ import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -89,6 +90,16 @@ fun PaperdollPanel(
     onExcludeItem: (Equipment) -> Unit,
     onEditRunes: (Equipment) -> Unit = {},
     onLockRunes: (Equipment) -> Unit = {},
+    onEditSublimations: (Equipment) -> Unit = {},
+    /** Manual-construction screen only: clicking an EMPTY slot opens an equip picker for it (called
+     * with the slot's [DollSlot.id]). `null` (the default, used by the auto-search Builder) leaves
+     * empty slots un-clickable, unchanged. `String`, not [DollSlot] itself, since [DollSlot] is
+     * `internal` and this function is public. */
+    onEmptySlotClick: ((String) -> Unit)? = null,
+    /** Manual-construction screen only: right-click "Unequip" on a filled slot. Non-null also flips
+     * the slot into manual mode: the [onForceItem]/[onExcludeItem] solver-constraint actions (meaningless
+     * without a solver in the loop) are hidden from both the context menu and the hover overlay. */
+    onUnequip: ((Equipment) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val slots = remember(ui.build) { slotAssignments(ui.build?.equipments.orEmpty()) }
@@ -137,6 +148,9 @@ fun PaperdollPanel(
                             onExcludeItem = onExcludeItem,
                             onEditRunes = onEditRunes,
                             onLockRunes = onLockRunes,
+                            onEditSublimations = onEditSublimations,
+                            onEmptySlotClick = onEmptySlotClick,
+                            onUnequip = onUnequip,
                             cardHeight = cardHeight,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
@@ -150,6 +164,9 @@ fun PaperdollPanel(
                             onExcludeItem = onExcludeItem,
                             onEditRunes = onEditRunes,
                             onLockRunes = onLockRunes,
+                            onEditSublimations = onEditSublimations,
+                            onEmptySlotClick = onEmptySlotClick,
+                            onUnequip = onUnequip,
                             cardHeight = cardHeight,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
@@ -177,6 +194,9 @@ fun PaperdollPanel(
                                     onExcludeItem = onExcludeItem,
                                     onEditRunes = onEditRunes,
                                     onLockRunes = onLockRunes,
+                                    onEditSublimations = onEditSublimations,
+                                    onEmptySlotClick = onEmptySlotClick?.let { cb -> { cb(slot.id) } },
+                                    onUnequip = onUnequip,
                                     runesPinned = ui.hasPinnedRunes(weaponEquipment),
                                     forced = ui.isForcedEquipment(slots[slot.id]),
                                     excluded = ui.isExcludedEquipment(slots[slot.id]),
@@ -302,6 +322,9 @@ private fun SlotColumn(
     onExcludeItem: (Equipment) -> Unit,
     onEditRunes: (Equipment) -> Unit,
     onLockRunes: (Equipment) -> Unit,
+    onEditSublimations: (Equipment) -> Unit,
+    onEmptySlotClick: ((String) -> Unit)?,
+    onUnequip: ((Equipment) -> Unit)?,
     cardHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -326,6 +349,9 @@ private fun SlotColumn(
                 onExcludeItem = onExcludeItem,
                 onEditRunes = onEditRunes,
                 onLockRunes = onLockRunes,
+                onEditSublimations = onEditSublimations,
+                onEmptySlotClick = onEmptySlotClick?.let { cb -> { cb(slot.id) } },
+                onUnequip = onUnequip,
                 runesPinned = ui.hasPinnedRunes(equipment),
                 forced = ui.isForcedEquipment(assignments[slot.id]),
                 excluded = ui.isExcludedEquipment(assignments[slot.id]),
@@ -350,6 +376,16 @@ private fun EquipmentSlot(
     onExcludeItem: (Equipment) -> Unit,
     onEditRunes: (Equipment) -> Unit = {},
     onLockRunes: (Equipment) -> Unit = {},
+    onEditSublimations: (Equipment) -> Unit = {},
+    onEmptySlotClick: (() -> Unit)? = null,
+    onUnequip: ((Equipment) -> Unit)? = null,
+    /** [me.chosante.ui.paperdoll.ItemBar] only: fires on left-click for BOTH empty and filled slots
+     * (unlike [onEmptySlotClick], which only fires on empty ones) -- "go pick an item for this slot",
+     * regardless of what's currently equipped. Takes precedence over [onEmptySlotClick] when set. */
+    onSlotClick: (() -> Unit)? = null,
+    /** [me.chosante.ui.paperdoll.ItemBar] only: renders a small icon-only square (via [CompactSlotCard])
+     * instead of the grid's full name/level row -- 14 of these fit across a horizontal strip. */
+    compact: Boolean = false,
     runesPinned: Boolean = false,
     forced: Boolean = false,
     excluded: Boolean = false,
@@ -357,23 +393,29 @@ private fun EquipmentSlot(
     cardHeight: Dp = 84.dp,
     modifier: Modifier = Modifier,
 ) {
+    val emptyClickHandler = onSlotClick ?: onEmptySlotClick
     if (equipment == null) {
         val content =
             @Composable { m: Modifier ->
-                SlotRowContent(
-                    slot,
-                    null,
-                    emptyList(),
-                    emptyList(),
-                    idle,
-                    justLanded,
-                    rightAlign,
-                    forced = false,
-                    excluded = false,
-                    emptyHint = emptyHint,
-                    cardHeight = cardHeight,
-                    modifier = m
-                )
+                val clickableM = if (emptyClickHandler != null) m.clickable(onClick = emptyClickHandler) else m
+                if (compact) {
+                    CompactSlotCard(slot = slot, equipment = null, idle = idle, justLanded = justLanded, forced = false, excluded = false, modifier = clickableM)
+                } else {
+                    SlotRowContent(
+                        slot,
+                        null,
+                        emptyList(),
+                        emptyList(),
+                        idle,
+                        justLanded,
+                        rightAlign,
+                        forced = false,
+                        excluded = false,
+                        emptyHint = emptyHint,
+                        cardHeight = cardHeight,
+                        modifier = clickableM
+                    )
+                }
             }
         // The card caption truncates the "why is this slot empty" hint; a hover tooltip shows it in full.
         if (emptyHint != null) {
@@ -394,18 +436,30 @@ private fun EquipmentSlot(
     val excludeLabel = tr(Tr.BAN)
     val editRunesLabel = tr(Tr.EDIT_RUNES)
     val lockRunesLabel = tr(Tr.LOCK_CURRENT_RUNES)
+    val editSublimationsLabel = tr(Tr.EDIT_SUBLIMATIONS)
+    val unequipLabel = tr(Tr.MANUAL_UNEQUIP)
     // Only items with shard sockets can carry runes; the action is hidden for socketless slots.
-    val canEditRunes = equipment.maxShardSlots > 0
+    // Also hidden in compact mode (the item bar): the Enchantment tab is the one place that manages
+    // runes/sublimations for the manual-construction screen now, so these would be dead menu items there.
+    val canEditRunes = equipment.maxShardSlots > 0 && !compact
     val canLockRunes = canEditRunes && runes.isNotEmpty()
+    // Manual-construction screen (onUnequip present): the solver-constraint Force/Exclude actions are
+    // meaningless without a solver in the loop, so they're replaced by Unequip everywhere below.
+    val manualMode = onUnequip != null
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     ContextMenuArea(
         items = {
             buildList {
-                add(ContextMenuItem(forceLabel) { onForceItem(equipment) })
-                add(ContextMenuItem(excludeLabel) { onExcludeItem(equipment) })
+                if (manualMode) {
+                    add(ContextMenuItem(unequipLabel) { onUnequip(equipment) })
+                } else {
+                    add(ContextMenuItem(forceLabel) { onForceItem(equipment) })
+                    add(ContextMenuItem(excludeLabel) { onExcludeItem(equipment) })
+                }
                 if (canEditRunes) add(ContextMenuItem(editRunesLabel) { onEditRunes(equipment) })
                 if (canLockRunes) add(ContextMenuItem(lockRunesLabel) { onLockRunes(equipment) })
+                if (canEditRunes) add(ContextMenuItem(editSublimationsLabel) { onEditSublimations(equipment) })
             }
         }
     ) {
@@ -415,10 +469,20 @@ private fun EquipmentSlot(
             tooltipPlacement = SlotTooltipPlacement,
             tooltip = { ItemTooltip(slot = slot, equipment = equipment, runes = runes, subs = subs) }
         ) {
-            Box(modifier = Modifier.fillMaxWidth().hoverable(interaction)) {
-                SlotRowContent(slot, equipment, runes, subs, idle, justLanded, rightAlign, forced, excluded, cardHeight = cardHeight, modifier = Modifier.fillMaxWidth())
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .hoverable(interaction)
+                        .then(if (onSlotClick != null) Modifier.clickable(onClick = onSlotClick) else Modifier)
+            ) {
+                if (compact) {
+                    CompactSlotCard(slot = slot, equipment = equipment, idle = idle, justLanded = justLanded, forced = forced, excluded = excluded)
+                } else {
+                    SlotRowContent(slot, equipment, runes, subs, idle, justLanded, rightAlign, forced, excluded, cardHeight = cardHeight, modifier = Modifier.fillMaxWidth())
+                }
                 val cornerAlign = if (rightAlign) Alignment.TopStart else Alignment.TopEnd
-                if (hovered) {
+                if (hovered && !manualMode && !compact) {
                     SlotActions(
                         onForce = { onForceItem(equipment) },
                         onExclude = { onExcludeItem(equipment) },
@@ -660,6 +724,101 @@ private fun SlotRowContent(
     }
 }
 
+/** Fixed square size of one [ItemBar] tile -- big enough to read the rarity border/thumbnail, small
+ * enough that all 14 fit across a horizontally-scrollable strip without feeling cramped. */
+internal val COMPACT_SLOT_SIZE = 60.dp
+
+/**
+ * [ItemBar]'s icon-only tile: same rarity-tinted border/background/land-animation idiom as
+ * [SlotRowContent], but square and without [SlotMeta]'s name/level text -- 14 of these read as a
+ * strip at a glance, the way the auto-Builder's grid cards (with full text) never could at that count.
+ */
+@Composable
+private fun CompactSlotCard(
+    slot: DollSlot,
+    equipment: Equipment?,
+    idle: Boolean,
+    justLanded: Boolean,
+    forced: Boolean,
+    excluded: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val filled = equipment != null
+    val scale by animateFloatAsState(targetValue = if (justLanded) 1.05f else 1f, label = "slot-land-compact")
+    val color = equipment?.rarity?.color() ?: WColor.border
+    Box(
+        modifier =
+            modifier
+                .size(COMPACT_SLOT_SIZE)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }.alpha(if (idle) 0.48f else 1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(WColor.surface)
+                .border(
+                    width = if (forced || excluded) 1.5.dp else 1.dp,
+                    color =
+                        when {
+                            excluded -> WColor.danger
+                            forced -> WColor.success
+                            filled -> WColor.hairline
+                            else -> WColor.border.copy(alpha = 0.75f)
+                        },
+                    shape = RoundedCornerShape(12.dp)
+                ).padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // cardHeight=84.dp is SlotIcon's own default -- yields its max 58.dp icon, which fits the 4.dp
+        // padding inside a 60.dp tile.
+        SlotIcon(slot = slot, equipment = equipment, color = color, cardHeight = 84.dp)
+    }
+}
+
+/**
+ * The manual-construction screen's top horizontal item strip: all 14 [DollSlot]s as compact icons in
+ * a fixed, sensible order, horizontally scrollable. Reuses [EquipmentSlot] in `compact` mode, so hover
+ * tooltip / right-click context menu (Unequip, Edit Runes, Edit Sublimations) work identically to the
+ * grid -- only the layout and click target (whole strip → [onSlotClick], not just empty slots) differ.
+ */
+@Composable
+fun ItemBar(
+    ui: UiState,
+    onEditRunes: (Equipment) -> Unit = {},
+    onEditSublimations: (Equipment) -> Unit = {},
+    onUnequip: (Equipment) -> Unit = {},
+    onSlotClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val slots = remember(ui.build) { slotAssignments(ui.build?.equipments.orEmpty()) }
+    val orderedSlots = remember { leftSlots + rightSlots + bottomSlots }
+    val scroll = rememberScrollState()
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(scroll).padding(vertical = 10.dp, horizontal = WDimens.pad),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        orderedSlots.forEach { slot ->
+            val equipment = slots[slot.id]
+            EquipmentSlot(
+                slot = slot,
+                equipment = equipment,
+                runes = equipment?.let { ui.build?.runes?.get(it) }.orEmpty(),
+                subs = equipment?.let { ui.build?.sublimations?.get(it) }.orEmpty(),
+                idle = ui.phase == Phase.Idle,
+                justLanded = equipment?.equipmentId == ui.lastLandedEquipmentId,
+                rightAlign = false,
+                onForceItem = {},
+                onExcludeItem = {},
+                onEditRunes = onEditRunes,
+                onEditSublimations = onEditSublimations,
+                onUnequip = onUnequip,
+                onSlotClick = { onSlotClick(slot.id) },
+                compact = true
+            )
+        }
+    }
+}
+
 /** The full "why is this slot empty" sentence for [hint] (shared by the card caption and its hover tooltip). */
 @Composable
 private fun emptyHintText(hint: EmptySlotHint): String {
@@ -855,19 +1014,28 @@ internal fun socketLayout(
  * (`theme/images/shard{Red,Green,Blue}Full`) into assets/runes/ by `generateAssets`. The stat each rune
  * carries is read from the tooltip text; the shape + colour identify it at a glance. Falls back to a plain
  * colour dot if an asset is missing.
+ *
+ * `internal` (not `private`): reused as-is by the manual-construction Enchantment tab
+ * ([me.chosante.ui.manualbuild.tabs.ManualEnchantmentTab]) to draw an item's current socket shards.
+ *
+ * [gold] draws a gold ring around the shard -- the manual-construction screen's cosmetic "this rune
+ * counts as any socket colour" flag (the in-game gold-rune mechanic). There's no separate gold shard
+ * asset, so the shape/colour still renders normally underneath; the ring is the only visual delta.
  */
 @Composable
-private fun RuneShape(
+internal fun RuneShape(
     color: RuneColor?,
     size: Dp,
     modifier: Modifier = Modifier,
+    gold: Boolean = false,
 ) {
+    val ringModifier = if (gold) modifier.border(2.dp, GOLD_RUNE_COLOR, RoundedCornerShape(999.dp)).padding(2.dp) else modifier
     if (color == null) {
         // A free / empty socket (white wildcard). The client has no white shard asset, so draw a neutral
         // hollow shard so the user still sees that the socket exists (and is unfilled).
         Box(
             modifier =
-                modifier
+                ringModifier
                     .size(size)
                     .clip(RoundedCornerShape(999.dp))
                     .background(WColor.surface)
@@ -888,18 +1056,22 @@ private fun RuneShape(
             contentDescription = null,
             contentScale = ContentScale.Fit,
             filterQuality = FilterQuality.High,
-            modifier = modifier.size(size)
+            modifier = ringModifier.size(size)
         )
     } else {
         Box(
             modifier =
-                modifier
+                ringModifier
                     .size(size)
                     .clip(RoundedCornerShape(999.dp))
                     .background(color.displayColor())
         )
     }
 }
+
+/** The manual-construction screen's "gold rune" colour -- the exact hex [me.chosante.ui.manualbuild.ManualSkillAllocator]'s
+ * Luck branch already uses, so gold reads as a colour this app already established, not a new ad-hoc one. */
+internal val GOLD_RUNE_COLOR = Color(0xFFE8C24A)
 
 @Composable
 private fun TooltipRuneRow(

@@ -175,8 +175,35 @@ private fun TopBarSingleRow(
                 onCancel = onCancel,
                 strip = false
             )
+        } else if (ui.screen == Screen.ManualBuild) {
+            // Class/level/min-level only -- no solver here, so no progress/match meters or Search
+            // button (those are exactly what SearchControls otherwise bundles them with).
+            Spacer(modifier = Modifier.width(14.dp))
+            ManualClassLevelControls(ui = ui, onClassChange = onClassChange, onLevelChange = onLevelChange, onMinLevelChange = onMinLevelChange)
         }
     }
+}
+
+/** [Screen.ManualBuild]'s compact class/level cluster -- "who this build is for" needs to be editable
+ * there too, but with no solver run there's nothing to show progress/match meters or a Search button
+ * for (unlike [SearchControls], which bundles all of that together for the auto-Builder). */
+@Composable
+private fun ManualClassLevelControls(
+    ui: UiState,
+    onClassChange: (CharacterClass) -> Unit,
+    onLevelChange: (String) -> Unit,
+    onMinLevelChange: (String) -> Unit,
+) {
+    ClassDropdown(selected = ui.clazz, onSelect = onClassChange)
+    Spacer(modifier = Modifier.width(10.dp))
+    NumberControl(label = tr(Tr.LEVEL_SHORT), value = ui.level.toString(), onValueChange = onLevelChange)
+    Spacer(modifier = Modifier.width(10.dp))
+    NumberControl(
+        label = tr(Tr.MIN_SHORT),
+        value = ui.minLevel.toString(),
+        onValueChange = onMinLevelChange,
+        isError = ui.minLevel > ui.level
+    )
 }
 
 /** Wrapped layout, row 1: the global chrome only (brand · nav · ＋New · Editing chip · lang). */
@@ -354,6 +381,7 @@ private fun NavTabs(
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavTab(label = tr(Tr.NAV_BUILDER), selected = current == Screen.Builder, onClick = { onNavigate(Screen.Builder) })
+        NavTab(label = tr(Tr.NAV_MANUAL_BUILD), selected = current == Screen.ManualBuild, onClick = { onNavigate(Screen.ManualBuild) })
         NavTab(label = tr(Tr.NAV_LIBRARY), selected = current == Screen.Library || current == Screen.Compare, onClick = { onNavigate(Screen.Library) })
         NavTab(label = tr(Tr.NAV_MARKET), selected = current == Screen.Market, onClick = { onNavigate(Screen.Market) })
         NavTab(label = tr(Tr.NAV_KAMAS), selected = current == Screen.Kamas, onClick = { onNavigate(Screen.Kamas) })

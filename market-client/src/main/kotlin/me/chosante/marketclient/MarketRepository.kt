@@ -207,6 +207,24 @@ class MarketRepository(
         }
 
     /**
+     * "How do I get this item" -- craft recipe (if any) + monster/harvest-node drop sources (if
+     * any), off market-server's `/api/items/{id}/sources`. Same best-effort shape as [getItem]:
+     * null on any failure, never on a critical path (this is enrichment for the item-detail popup).
+     */
+    suspend fun itemSources(itemId: Int): ItemSourcesResponse? =
+        withContext(ioDispatcher) {
+            try {
+                val (_, _, result) =
+                    "$baseUrl/api/items/$itemId/sources"
+                        .httpGet()
+                        .awaitObjectResponse(kotlinxDeserializerOf(loader = ItemSourcesResponse.serializer(), json = json))
+                result
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    /**
      * HDV-style browse: search the item catalog by name/level range/rarity/category, each hit
      * carrying its latest known price. Throws on failure like [listObservations] -- unlike [getItem]'s
      * best-effort enrichment, this list IS the Prices tab's primary content, so the caller must be

@@ -806,6 +806,255 @@ class BuildSearchModel(
             )
     }
 
+    // --- Manual build construction (Screen.ManualBuild) ---
+    // A second, solver-independent way to reach a build (à la Zenith/Wakfuli): equip/socket/allocate
+    // directly. Writes straight into ui.manualBuild's actual BuildCombination -- never ui.build,
+    // ui.forcedItems, or ui.forcedRunesByItem, which are solver INPUT constraints interpreted by a
+    // future search run, not assembled state. Every mutation re-checks BuildCombination.isValid()
+    // (which also covers sublimation legality) before committing, and toast-rejects otherwise.
+
+    private fun manualCharacterBaseCharacteristics(): Map<Characteristic, Int> = Character(ui.clazz, ui.level, ui.minLevel).baseCharacteristicValues
+
+    private fun commitManualBuild(
+        candidate: BuildCombination,
+        closeModal: Boolean = false,
+    ): Boolean {
+        if (!candidate.isValid()) {
+            ui = ui.copy(toast = Tr.TOAST_INVALID_MANUAL_BUILD.value(ui.lang))
+            return false
+        }
+        ui =
+            ui.copy(
+                manualBuild = candidate,
+                manualAchieved = computeCharacteristicsValues(candidate, manualCharacterBaseCharacteristics(), emptyMap(), emptyMap()),
+                modal = if (closeModal) null else ui.modal
+            )
+        return true
+    }
+
+    /** Jump to the Items tab, pre-filtered to [slotId]'s compatible types -- works for an empty OR an
+     * already-filled slot (picking a card there replaces whatever is equipped). Replaces the old
+     * modal-based picker: the Items tab IS the picker now. */
+    fun openManualItemsTabForSlot(slotId: String) {
+        ensureCatalogLoaded()
+        ui =
+            ui.copy(
+                manualActiveTab = ManualTab.ITEMS,
+                manualItemTypeFilter =
+                    me.chosante.ui.paperdoll
+                        .itemTypesForSlot(slotId)
+            )
+    }
+
+    /**
+     * Equip [equipment] directly into [slotId] -- replace-in-slot semantics, no solver constraint
+     * involved (contrast [pickItem]). The two weapon slots special-case: a two-handed weapon occupies
+     * BOTH, so equipping either one clears both first, restoring the other slot's previous occupant
+     * only when it's still compatible (neither pick is a two-hander).
+     */
+    fun equipItemInManualSlot(
+        slotId: String,
+        equipment: Equipment,
+    ) {
+        val current =
+            ui.manualBuild ?: BuildCombination(
+                equipments = emptyList(),
+                characterSkills =
+                    me.chosante.common.skills
+                        .CharacterSkills(ui.level)
+            )
+        val assignments =
+            me.chosante.ui.paperdoll
+                .slotAssignments(current.equipments)
+        val newEquipments = current.equipments.toMutableList()
+        when (slotId) {
+            "weapon", "weapon2" -> {
+                val other = assignments[if (slotId == "weapon") "weapon2" else "weapon"]
+                newEquipments.removeAll {
+                    it.itemType == ItemType.ONE_HANDED_WEAPONS || it.itemType == ItemType.TWO_HANDED_WEAPONS || it.itemType == ItemType.OFF_HAND_WEAPONS
+                }
+                if (equipment.itemType != ItemType.TWO_HANDED_WEAPONS && other != null && other.itemType != ItemType.TWO_HANDED_WEAPONS) {
+                    newEquipments += other
+                }
+            }
+            else -> assignments[slotId]?.let { newEquipments.remove(it) }
+        }
+        newEquipments += equipment
+        commitManualBuild(current.copy(equipments = newEquipments), closeModal = true)
+    }
+
+    /** Right-click "Unequip" on a filled manual-build slot; drops its runes/sublimations/slot-state
+     * with it. */
+    fun unequipManualItem(equipment: Equipment) {
+        val current = ui.manualBuild ?: return
+        ui =
+            ui.copy(
+                manualRuneSlots = ui.manualRuneSlots - equipment.name.fr,
+                manualGoldRuneSlots = ui.manualGoldRuneSlots - equipment.name.fr
+            )
+        commitManualBuild(
+            current.copy(
+                equipments = current.equipments - equipment,
+                runes = current.runes - equipment,
+                sublimations = current.sublimations - equipment
+            )
+        )
+    }
+
+    /** Re-derives [BuildCombination.runes] for [equipment] from [UiState.manualRuneSlots] -- a
+     * compacted (nulls filtered), order-independent list, which is all stat computation/Zenith
+     * export ever reads. The slot positions/gold flags themselves live only in [UiState.manualRuneSlots]/
+     * [UiState.manualGoldRuneSlots], never in [BuildCombination] (see [placeManualRuneInSlot]'s doc). */
+    private fun syncManualRunesFromSlots(equipment: Equipment) {
+        val current = ui.manualBuild ?: return
+        val compacted = ui.manualRuneSlots[equipment.name.fr].orEmpty().filterNotNull()
+        val newRunes = if (compacted.isEmpty()) current.runes - equipment else current.runes + (equipment to compacted)
+        commitManualBuild(current.copy(runes = newRunes))
+    }
+
+    /**
+     * Enchantment tab: socket [rune] into [itemName]'s physical slot [slotIndex] (0-based, < its
+     * [me.chosante.common.Equipment.maxShardSlots]) -- overwrites whatever was there, including any
+     * gold flag (a freshly-placed rune is never gold until explicitly toggled). [UiState.manualRuneSlots]
+     * is the slot-addressed source of truth; [BuildCombination.runes] is re-derived from it
+     * ([syncManualRunesFromSlots]) since stat totals/Zenith export only ever need the compacted list.
+     */
+    fun placeManualRuneInSlot(
+        itemName: String,
+        slotIndex: Int,
+        rune: me.chosante.common.RuneType,
+    ) {
+        val equipment = ui.manualBuild?.equipments?.firstOrNull { it.name.fr == itemName } ?: return
+        if (slotIndex !in 0 until equipment.maxShardSlots) return
+        val slots = (ui.manualRuneSlots[itemName] ?: List(equipment.maxShardSlots) { null }).toMutableList()
+        slots[slotIndex] = rune
+        ui =
+            ui.copy(
+                manualRuneSlots = ui.manualRuneSlots + (itemName to slots),
+                manualGoldRuneSlots = ui.manualGoldRuneSlots + (itemName to (ui.manualGoldRuneSlots[itemName].orEmpty() - slotIndex))
+            )
+        syncManualRunesFromSlots(equipment)
+    }
+
+    /** Enchantment tab: empty [itemName]'s slot [slotIndex] (click a filled slot with nothing armed). */
+    fun clearManualRuneSlot(
+        itemName: String,
+        slotIndex: Int,
+    ) {
+        val equipment = ui.manualBuild?.equipments?.firstOrNull { it.name.fr == itemName } ?: return
+        val slots = ui.manualRuneSlots[itemName]?.toMutableList() ?: return
+        if (slotIndex !in slots.indices) return
+        slots[slotIndex] = null
+        ui =
+            ui.copy(
+                manualRuneSlots = ui.manualRuneSlots + (itemName to slots),
+                manualGoldRuneSlots = ui.manualGoldRuneSlots + (itemName to (ui.manualGoldRuneSlots[itemName].orEmpty() - slotIndex))
+            )
+        syncManualRunesFromSlots(equipment)
+    }
+
+    /** Enchantment tab: right-click a FILLED slot to flag it "gold" (wildcard socket colour) -- a
+     * cosmetic-only override matching the in-game gold-rune mechanic ([UiState.manualGoldRuneSlots]);
+     * it never changes [BuildCombination.runes] or any computed stat. No-ops on an empty slot. */
+    fun toggleManualRuneSlotGold(
+        itemName: String,
+        slotIndex: Int,
+    ) {
+        if (ui.manualRuneSlots[itemName]?.getOrNull(slotIndex) == null) return
+        val current = ui.manualGoldRuneSlots[itemName].orEmpty()
+        ui = ui.copy(manualGoldRuneSlots = ui.manualGoldRuneSlots + (itemName to (if (slotIndex in current) current - slotIndex else current + slotIndex)))
+    }
+
+    /**
+     * Enchantment tab: socket [sub] onto the carrier item named [itemName] -- REPLACES whatever
+     * sublimation it already carries (there is exactly one sublimation slot per item in this UI,
+     * matching [BuildCombination.hasLegalSublimations]'s "at most one per item" rule already enforced
+     * for normal subs, and the global 1-epic/1-relic cap for those). Rejects (toast) when
+     * [BuildCombination.isValid]'s sublimation-legality rules refuse it (wrong-rarity carrier, etc.).
+     */
+    fun setManualSublimationForItem(
+        itemName: String,
+        sub: me.chosante.common.Sublimation,
+    ) {
+        val current = ui.manualBuild ?: return
+        val equipment = current.equipments.firstOrNull { it.name.fr == itemName } ?: return
+        commitManualBuild(current.copy(sublimations = current.sublimations + (equipment to listOf(sub))))
+    }
+
+    /** Enchantment tab: empty [itemName]'s sublimation slot (click it with nothing armed). */
+    fun removeManualSublimationFromItem(itemName: String) {
+        val current = ui.manualBuild ?: return
+        val equipment = current.equipments.firstOrNull { it.name.fr == itemName } ?: return
+        commitManualBuild(current.copy(sublimations = current.sublimations - equipment))
+    }
+
+    /** Apply a full skill re-allocation (see [me.chosante.ui.manualbuild.manualSkillBranches]). */
+    fun setManualSkills(skills: me.chosante.common.skills.CharacterSkills) {
+        val current = ui.manualBuild ?: return
+        commitManualBuild(current.copy(characterSkills = skills))
+    }
+
+    /** Start a brand-new, empty manual build for the current class/level (clears any in-progress one). */
+    fun resetManualBuild() {
+        ui =
+            ui.copy(
+                manualBuild =
+                    BuildCombination(
+                        equipments = emptyList(),
+                        characterSkills =
+                            me.chosante.common.skills
+                                .CharacterSkills(ui.level)
+                    ),
+                manualAchieved = emptyMap(),
+                manualZenithState = ZenithState.Idle,
+                manualZenithUrl = null,
+                manualActiveBuildId = null,
+                manualActiveBuildName = null
+            )
+    }
+
+    fun setManualTab(tab: ManualTab) {
+        ui = ui.copy(manualActiveTab = tab)
+    }
+
+    fun setManualNote(text: String) {
+        ui = ui.copy(manualNote = text)
+    }
+
+    fun setManualItemQuery(query: String) {
+        ui = ui.copy(manualItemQuery = query)
+    }
+
+    fun setManualItemMinLevel(value: String) {
+        ui = ui.copy(manualItemMinLevel = value.onlyDigits())
+    }
+
+    fun setManualItemMaxLevel(value: String) {
+        ui = ui.copy(manualItemMaxLevel = value.onlyDigits())
+    }
+
+    fun toggleManualItemType(type: ItemType) {
+        ui = ui.copy(manualItemTypeFilter = if (type in ui.manualItemTypeFilter) ui.manualItemTypeFilter - type else ui.manualItemTypeFilter + type)
+    }
+
+    fun toggleManualItemRarity(rarity: Rarity) {
+        ui =
+            ui.copy(
+                manualItemRarityFilter = if (rarity in ui.manualItemRarityFilter) ui.manualItemRarityFilter - rarity else ui.manualItemRarityFilter + rarity
+            )
+    }
+
+    fun resetManualItemFilters() {
+        ui =
+            ui.copy(
+                manualItemQuery = "",
+                manualItemMinLevel = "0",
+                manualItemMaxLevel = "245",
+                manualItemTypeFilter = emptySet(),
+                manualItemRarityFilter = emptySet()
+            )
+    }
+
     fun openModal(modal: Modal) {
         ui = ui.copy(modal = modal)
         if (modal is Modal.ItemPicker) {
@@ -1296,13 +1545,15 @@ class BuildSearchModel(
      * build is loaded its metadata (note/tags/folder/created date) is preserved.
      */
     fun exportBuild() {
-        if (ui.build == null) return
-        val active = ui.activeBuildId?.let { id -> ui.savedBuilds.firstOrNull { it.id == id } }
+        val source = saveSource()
+        if (source.build == null) return
+        val active = source.activeBuildId?.let { id -> ui.savedBuilds.firstOrNull { it.id == id } }
+        val isManual = ui.screen == Screen.ManualBuild
         val entry =
-            ui.toHistoryEntry(
+            source.toHistoryEntry(
                 id = active?.id ?: idGenerator(),
-                name = ui.activeBuildName ?: ui.suggestedBuildName(),
-                note = active?.note,
+                name = source.activeBuildName ?: source.suggestedBuildName(),
+                note = active?.note ?: (if (isManual) ui.manualNote.ifBlank { null } else null),
                 createdAt = active?.createdAt ?: clock(),
                 dataVersion = dataVersion,
                 tags = active?.tags ?: emptyList(),
@@ -1313,8 +1564,57 @@ class BuildSearchModel(
     }
 
     private fun createZenithLink(onReady: (String) -> Unit) {
-        val build = ui.build ?: return
-        ui = ui.copy(zenith = ZenithState.Loading, error = null, toast = null)
+        createZenithLink(
+            build = ui.build,
+            setZenithState = { state -> ui = ui.copy(zenith = state) },
+            setZenithUrl = { url -> ui = ui.copy(zenithUrl = url) },
+            onReady = onReady
+        )
+    }
+
+    fun openManualZenithBuild() {
+        createManualZenithLink { link ->
+            runCatching {
+                openBrowser(link)
+            }.onFailure { exception ->
+                ui = ui.copy(manualZenithState = ZenithState.Error, error = exception.message ?: "Unable to open Zenith")
+            }
+        }
+    }
+
+    fun copyManualZenithLink() {
+        createManualZenithLink { link ->
+            copyToClipboard(link)
+            ui = ui.copy(toast = Tr.TOAST_ZENITH_COPIED.value(ui.lang))
+        }
+    }
+
+    private fun createManualZenithLink(onReady: (String) -> Unit) {
+        createZenithLink(
+            build = ui.manualBuild,
+            setZenithState = { state -> ui = ui.copy(manualZenithState = state) },
+            setZenithUrl = { url -> ui = ui.copy(manualZenithUrl = url) },
+            onReady = onReady
+        )
+    }
+
+    /**
+     * Shared core behind [openZenithBuild]/[copyZenithLink] (auto-Builder) and
+     * [openManualZenithBuild]/[copyManualZenithLink] (manual-construction screen). Deliberately does
+     * NOT swap `ui.build` for `ui.manualBuild` around a single implementation — that would race
+     * against the async Zenith call (whichever screen isn't active when the response lands could get
+     * corrupted). Instead each caller supplies its own [setZenithState]/[setZenithUrl] targets so the
+     * two screens' Zenith state stay fully independent.
+     */
+    private fun createZenithLink(
+        build: BuildCombination?,
+        setZenithState: (ZenithState) -> Unit,
+        setZenithUrl: (String?) -> Unit,
+        onReady: (String) -> Unit,
+    ) {
+        if (build == null) return
+        setZenithState(ZenithState.Loading)
+        ui = ui.copy(error = null, toast = null)
         val character = Character(ui.clazz, ui.level, ui.minLevel).copy(characterSkills = build.characterSkills)
         scope.launch(Dispatchers.Default) {
             try {
@@ -1328,18 +1628,15 @@ class BuildSearchModel(
                         )
                     )
                 withContext(mainDispatcher) {
-                    ui =
-                        ui.copy(
-                            zenith = ZenithState.Ready,
-                            zenithUrl = link,
-                            toast =
-                                Tr.TOAST_ZENITH_READY.value(ui.lang)
-                        )
+                    setZenithState(ZenithState.Ready)
+                    setZenithUrl(link)
+                    ui = ui.copy(toast = Tr.TOAST_ZENITH_READY.value(ui.lang))
                     onReady(link)
                 }
             } catch (exception: Exception) {
                 withContext(mainDispatcher) {
-                    ui = ui.copy(zenith = ZenithState.Error, error = exception.message ?: "Zenith build failed")
+                    setZenithState(ZenithState.Error)
+                    ui = ui.copy(error = exception.message ?: "Zenith build failed")
                 }
             }
         }
@@ -1694,6 +1991,24 @@ class BuildSearchModel(
         }
     }
 
+    /**
+     * Resolves [itemId]'s "how do I get this" sources (recipe + monster/harvest-node drops) via
+     * `GET /api/items/{id}/sources`, caching the result in [UiState.itemSourcesCache]. Same
+     * fire-and-forget/idempotent-per-session shape as [ensureItemInfoLoaded].
+     */
+    fun ensureItemSourcesLoaded(itemId: Int) {
+        if (itemId in ui.itemSourcesRequested) return
+        ui = ui.copy(itemSourcesRequested = ui.itemSourcesRequested + itemId)
+        scope.launch(Dispatchers.Default) {
+            val sources = marketRepository.itemSources(itemId)
+            if (sources != null) {
+                withContext(mainDispatcher) {
+                    ui = ui.copy(itemSourcesCache = ui.itemSourcesCache + (itemId to sources))
+                }
+            }
+        }
+    }
+
     /** Start an HDV price capture (kills any running Wakfu, launches tshark + the real game). */
     fun startCapture() {
         scope.launch(Dispatchers.Default) {
@@ -1829,6 +2144,10 @@ class BuildSearchModel(
         if (screen == Screen.Kamas) {
             ensureKamasTabLoaded(ui.kamasTab)
         }
+        if (screen == Screen.ManualBuild) {
+            ensureCatalogLoaded()
+            if (ui.manualBuild == null) resetManualBuild()
+        }
     }
 
     /** Switch the result region between the discovered build and the class's spells & passives. */
@@ -1878,14 +2197,18 @@ class BuildSearchModel(
             )
     }
 
+    /** [Screen.ManualBuild]'s own build, projected through [asManualView] so save/name logic below can
+     * read/write it via the exact same [UiState] extension functions the auto-Builder uses. */
+    private fun saveSource(): UiState = if (ui.screen == Screen.ManualBuild) ui.asManualView() else ui
+
     /** Opens the save dialog, pre-filling the name (existing name when editing a loaded build). */
     fun requestSaveBuild() {
-        if (ui.build == null) return
+        if (saveSource().build == null) return
         ui = ui.copy(modal = Modal.SaveBuild)
     }
 
     /** Default text for the save dialog's name field. */
-    fun suggestedSaveName(): String = ui.activeBuildName ?: ui.suggestedBuildName()
+    fun suggestedSaveName(): String = saveSource().let { it.activeBuildName ?: it.suggestedBuildName() }
 
     /**
      * Names already used by *other* saved builds (the active build's own name is excluded so updating
@@ -1894,31 +2217,37 @@ class BuildSearchModel(
      */
     fun takenBuildNames(): Set<String> =
         ui.savedBuilds
-            .filter { it.id != ui.activeBuildId }
+            .filter { it.id != saveSource().activeBuildId }
             .map { it.name.trim().lowercase() }
             .toSet()
 
     /**
-     * Persists the current workspace build. When [asNew] is false and a build is already loaded, it
-     * overwrites that entry (same id); otherwise it creates a new entry. Local write is the source of
-     * truth and is done off the UI thread; the in-memory library is refreshed afterwards.
+     * Persists the current workspace build — the auto-Builder's or [Screen.ManualBuild]'s, whichever
+     * is active (via [saveSource]). When [asNew] is false and a build is already loaded, it overwrites
+     * that entry (same id); otherwise it creates a new entry. Local write is the source of truth and is
+     * done off the UI thread; the in-memory library is refreshed afterwards.
      */
     fun saveBuild(
         name: String,
         note: String?,
         asNew: Boolean,
     ) {
-        val trimmedName = name.trim().ifBlank { ui.suggestedBuildName() }
-        val overwrite = !asNew && ui.activeBuildId != null
-        val id = if (overwrite) ui.activeBuildId!! else idGenerator()
+        val isManual = ui.screen == Screen.ManualBuild
+        val source = saveSource()
+        val trimmedName = name.trim().ifBlank { source.suggestedBuildName() }
+        val overwrite = !asNew && source.activeBuildId != null
+        val id = if (overwrite) source.activeBuildId!! else idGenerator()
         // Overwriting rebuilds the entry from the workspace, which doesn't carry user metadata (tags,
         // folder) — re-read them from the existing entry so an "Update build" never silently wipes them.
         val existing = if (overwrite) ui.savedBuilds.firstOrNull { it.id == id } else null
+        // On the manual screen, an empty save-dialog note falls back to the Note tab's own text — the
+        // dialog's own input still wins when the user typed something there.
+        val effectiveNote = note?.ifBlank { null } ?: (if (isManual) ui.manualNote.ifBlank { null } else null)
         val entry =
-            ui.toHistoryEntry(
+            source.toHistoryEntry(
                 id = id,
                 name = trimmedName,
-                note = note,
+                note = effectiveNote,
                 createdAt = clock(),
                 dataVersion = dataVersion,
                 tags = existing?.tags ?: emptyList(),
@@ -1926,7 +2255,12 @@ class BuildSearchModel(
             ) ?: return
         // Note: saving does NOT lock search. The lock guards *revisiting* a build loaded from the
         // library (a deliberate act); right after saving you should stay free to keep iterating.
-        ui = ui.copy(modal = null, activeBuildId = id, activeBuildName = trimmedName)
+        ui =
+            if (isManual) {
+                ui.copy(modal = null, manualActiveBuildId = id, manualActiveBuildName = trimmedName)
+            } else {
+                ui.copy(modal = null, activeBuildId = id, activeBuildName = trimmedName)
+            }
         scope.launch(ioDispatcher) {
             runCatching { historyRepository.save(entry) }
                 .onSuccess {

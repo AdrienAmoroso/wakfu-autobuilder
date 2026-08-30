@@ -7,6 +7,7 @@ import io.ktor.server.routing.get
 import me.chosante.common.Rarity
 import me.chosante.marketserver.dto.ItemSearchResult
 import me.chosante.marketserver.equipment.ItemCatalog
+import me.chosante.marketserver.service.ItemSourcesService
 import me.chosante.marketserver.service.PriceObservationService
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -31,6 +32,19 @@ fun Route.itemRoutes(database: Database) {
         } else {
             call.respond(item)
         }
+    }
+
+    // "How do I get this item" -- craft recipe (if any) + monster/harvest-node drop sources (if
+    // any). No DB/pricing involved (see ItemSourcesResponse's doc comment), so this responds even
+    // for an item id ItemCatalog itself doesn't know about (a recipe/drop can reference an id with
+    // no catalog entry -- see the "Unknown item" work) as long as it appears in at least one source;
+    // an id with none of the three returns an all-empty response, not a 404, since "no known sources
+    // yet" is itself useful information, not an error.
+    get("/api/items/{id}/sources") {
+        val id =
+            call.parameters["id"]?.toIntOrNull()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "id must be an integer")
+        call.respond(ItemSourcesService.compute(id))
     }
 
     // HDV-style browse: search the item catalog (equipment + resources/consumables/cosmetics/misc +

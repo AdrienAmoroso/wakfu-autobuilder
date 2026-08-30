@@ -37,6 +37,7 @@ import me.chosante.common.Characteristic
 import me.chosante.common.Equipment
 import me.chosante.common.Rarity
 import me.chosante.marketclient.ItemInfoResponse
+import me.chosante.marketclient.ItemSourcesResponse
 import me.chosante.ui.i18n.Lang
 import me.chosante.ui.i18n.Tr
 import me.chosante.ui.i18n.label
@@ -230,10 +231,12 @@ internal fun ItemBadge(
     lang: Lang,
     onRequestItemInfo: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    sources: ItemSourcesResponse? = null,
+    onRequestSources: (Int) -> Unit = {},
 ) {
     LaunchedEffect(itemId) { onRequestItemInfo(itemId) }
     if (item != null) {
-        ItemInfoBadge(item = item, lang = lang, modifier = modifier)
+        ItemInfoBadge(item = item, lang = lang, modifier = modifier, sources = sources, onRequestSources = onRequestSources)
     } else {
         Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WColor.bg))
@@ -253,6 +256,8 @@ internal fun ItemInfoBadge(
     item: ItemInfoResponse,
     lang: Lang,
     modifier: Modifier = Modifier,
+    sources: ItemSourcesResponse? = null,
+    onRequestSources: (Int) -> Unit = {},
 ) {
     var detailsOpen by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
@@ -276,17 +281,23 @@ internal fun ItemInfoBadge(
             }
         }
         DropdownMenu(expanded = detailsOpen, onDismissRequest = { detailsOpen = false }, containerColor = WColor.surface) {
-            ItemDetailContent(item = item, lang = lang)
+            ItemDetailContent(item = item, lang = lang, sources = sources, onRequestSources = onRequestSources)
         }
     }
 }
 
-/** The full "what does this item actually do" panel opened from [ItemInfoBadge]. */
+/** The full "what does this item actually do" panel opened from [ItemInfoBadge] -- including, once
+ * [onRequestSources] resolves [sources], a compact "how do I get this" section (recipe / monster
+ * drops / harvest-node drops). This is the minimal surfacing of the item-sources foundation; a full
+ * build-explanation page reusing the same [ItemSourcesResponse] data is future work. */
 @Composable
 private fun ItemDetailContent(
     item: ItemInfoResponse,
     lang: Lang,
+    sources: ItemSourcesResponse? = null,
+    onRequestSources: (Int) -> Unit = {},
 ) {
+    LaunchedEffect(item.itemId) { onRequestSources(item.itemId) }
     Column(
         modifier = Modifier.widthIn(min = 200.dp, max = 300.dp).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -313,8 +324,51 @@ private fun ItemDetailContent(
                 ItemStatRow(characteristic = characteristic, value = value, lang = lang)
             }
         }
+        sources?.let { ItemSourcesSection(sources = it, lang = lang) }
     }
 }
+
+/** "How do I get this item" -- recipe / monster drops / harvest-node drops, whichever apply (an
+ * item can have several at once, or none, which renders nothing at all rather than an empty title). */
+@Composable
+private fun ItemSourcesSection(
+    sources: ItemSourcesResponse,
+    lang: Lang,
+) {
+    if (sources.recipe == null && sources.monsterSources.isEmpty() && sources.harvestSources.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(text = tr(Tr.ITEM_SOURCES_TITLE), style = WTypography.labelSmall.copy(color = WColor.muted, fontWeight = FontWeight.SemiBold))
+        sources.recipe?.let { recipe ->
+            Text(
+                text = tr(Tr.ITEM_SOURCES_RECIPE).format(recipe.jobName.localized(lang), recipe.ingredients.size),
+                style = WTypography.labelSmall.copy(color = WColor.muted)
+            )
+        }
+        if (sources.monsterSources.isNotEmpty()) {
+            Text(
+                text = tr(Tr.ITEM_SOURCES_MONSTERS).format(namesWithMore(sources.monsterSources.map { it.name.localized(lang) })),
+                style = WTypography.labelSmall.copy(color = WColor.muted)
+            )
+        }
+        if (sources.harvestSources.isNotEmpty()) {
+            Text(
+                text = tr(Tr.ITEM_SOURCES_NODES).format(namesWithMore(sources.harvestSources.map { it.name.localized(lang) })),
+                style = WTypography.labelSmall.copy(color = WColor.muted)
+            )
+        }
+    }
+}
+
+private const val MAX_SOURCE_NAMES_SHOWN = 5
+
+/** Joins up to [MAX_SOURCE_NAMES_SHOWN] names, collapsing the rest into a localized "+N more". */
+@Composable
+private fun namesWithMore(names: List<String>): String =
+    if (names.size <= MAX_SOURCE_NAMES_SHOWN) {
+        names.joinToString(", ")
+    } else {
+        names.take(MAX_SOURCE_NAMES_SHOWN).joinToString(", ") + " " + tr(Tr.ITEM_SOURCES_MORE).format(names.size - MAX_SOURCE_NAMES_SHOWN)
+    }
 
 /** One characteristic's label+value row inside [ItemDetailContent] — mirrors the paperdoll's own
  * tooltip row (`PaperdollPanel.TooltipStatRow`) so an item's stats look the same everywhere they're

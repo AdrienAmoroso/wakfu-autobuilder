@@ -1193,8 +1193,10 @@ private fun ErrorBanner(error: String) {
     }
 }
 
+// internal (not private): reused as-is by the manual-construction screen's skill allocator
+// (me.chosante.ui.manualbuild.ManualSkillTree) so its cards match this panel's styling exactly.
 @Composable
-private fun ResultCard(
+internal fun ResultCard(
     title: String? = null,
     trailing: String? = null,
     content: @Composable () -> Unit,

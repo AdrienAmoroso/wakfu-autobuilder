@@ -127,8 +127,8 @@ The output of the command will show the details of the best build found, such as
 - [X] Have a User Interface (Compose Desktop)
 - [X] Provably optimal builds (OR-Tools CP-SAT solver)
 - [X] Multi-language Support (English / French)
-- [ ] Enchantments support (runes + sublimations) — see `docs/ENCHANTMENTS_PLAN.md`
-- [ ] Add Changelog
+- [X] Enchantments support (runes + sublimations) — see `docs/ENCHANTMENTS_PLAN.md`
+- [X] Add Changelog
 
 See the [open issues](https://github.com/CharlyRien/wakfu-autobuilder/issues) for a full list of proposed features (and known issues).
 

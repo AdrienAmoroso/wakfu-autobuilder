@@ -52,6 +52,56 @@ internal val bottomSlots =
         DollSlot("mount", Tr.SLOT_MOUNT, "≋", ItemType.MOUNTS.id)
     )
 
+/**
+ * Which [ItemType]s the manual-construction screen's equip picker should show for [slotId] --
+ * usually a single type (derived from [DollSlot.itemTypeId] via its matching [ItemType]), except
+ * the two weapon slots, which can each legally hold a two-handed weapon too (see
+ * [me.chosante.autobuilder.domain.BuildCombination.isValid]'s weapon-slot rules).
+ */
+internal fun itemTypesForSlot(slotId: String): Set<ItemType> =
+    when (slotId) {
+        "weapon" -> setOf(ItemType.ONE_HANDED_WEAPONS, ItemType.TWO_HANDED_WEAPONS)
+        "weapon2" -> setOf(ItemType.OFF_HAND_WEAPONS, ItemType.TWO_HANDED_WEAPONS)
+        else ->
+            (leftSlots + rightSlots + bottomSlots)
+                .firstOrNull { it.id == slotId }
+                ?.itemTypeId
+                ?.let { id -> ItemType.entries.firstOrNull { it.id == id } }
+                ?.let { setOf(it) }
+                .orEmpty()
+    }
+
+/**
+ * The manual-construction Items tab's "click a card to equip it" counterpart to [itemTypesForSlot]:
+ * given [itemType] and the build's [assignments], which slot id equipping it should target.
+ *  - Rings: whichever of ring1/ring2 is free; if both are taken, ring1 (oldest-first replace).
+ *  - Weapons: [me.chosante.common.ItemType.ONE_HANDED_WEAPONS]/[me.chosante.common.ItemType.TWO_HANDED_WEAPONS]
+ *    target "weapon", [me.chosante.common.ItemType.OFF_HAND_WEAPONS] targets "weapon2" — matching
+ *    [BuildCombination.isValid]'s weapon-slot rules, which [BuildSearchModel.equipItemInManualSlot]
+ *    (the actual mutator this feeds) already special-cases per slot id.
+ *  - Everything else: its single matching slot, via [itemTypesForSlot]'s reverse.
+ */
+internal fun naturalSlotIdFor(
+    itemType: ItemType,
+    assignments: Map<String, Equipment>,
+): String =
+    when (itemType) {
+        ItemType.RING ->
+            if ("ring1" !in assignments) {
+                "ring1"
+            } else if ("ring2" !in assignments) {
+                "ring2"
+            } else {
+                "ring1"
+            }
+        ItemType.ONE_HANDED_WEAPONS, ItemType.TWO_HANDED_WEAPONS -> "weapon"
+        ItemType.OFF_HAND_WEAPONS -> "weapon2"
+        else ->
+            (leftSlots + rightSlots + bottomSlots)
+                .first { it.itemTypeId == itemType.id }
+                .id
+    }
+
 internal fun slotAssignments(equipments: List<Equipment>): Map<String, Equipment> {
     val rings = equipments.filter { it.itemType == ItemType.RING }
     val twoHanded = equipments.firstOrNull { it.itemType == ItemType.TWO_HANDED_WEAPONS }

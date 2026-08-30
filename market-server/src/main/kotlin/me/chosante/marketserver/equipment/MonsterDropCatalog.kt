@@ -1,6 +1,7 @@
 package me.chosante.marketserver.equipment
 
 import kotlinx.serialization.json.Json
+import me.chosante.common.HarvestDrop
 import me.chosante.common.Monster
 import me.chosante.common.MonsterLoot
 
@@ -40,5 +41,13 @@ object MonsterDropCatalog {
      */
     val all: List<Pair<Monster, MonsterLoot>> by lazy {
         monstersById.values.map { monster -> monster to (lootByMonsterId[monster.id] ?: MonsterLoot(monsterId = monster.id, drops = emptyList())) }
+    }
+
+    /** Reverse of [all]: which monster(s) drop a given item, and at what rate/quantity -- the
+     * "where do I get this" lookup ([me.chosante.marketserver.service.ItemSourcesService]). */
+    val monstersByItemId: Map<Int, List<Pair<Monster, HarvestDrop>>> by lazy {
+        all
+            .flatMap { (monster, loot) -> loot.drops.map { drop -> drop.itemId to (monster to drop) } }
+            .groupBy({ it.first }, { it.second })
     }
 }

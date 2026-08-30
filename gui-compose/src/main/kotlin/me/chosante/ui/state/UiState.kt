@@ -13,14 +13,17 @@ import me.chosante.autobuilder.genetic.wakfu.isRandomElementStat
 import me.chosante.common.CharacterClass
 import me.chosante.common.Characteristic
 import me.chosante.common.Equipment
+import me.chosante.common.ItemType
 import me.chosante.common.Monster
 import me.chosante.common.Rarity
+import me.chosante.common.RuneType
 import me.chosante.common.history.HistoryEntry
 import me.chosante.marketclient.CaptureStatusResponse
 import me.chosante.marketclient.CraftCostResponse
 import me.chosante.marketclient.HarvestOpportunity
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.ItemSearchResult
+import me.chosante.marketclient.ItemSourcesResponse
 import me.chosante.marketclient.MonsterFarmingOpportunity
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.i18n.Lang
@@ -111,6 +114,7 @@ enum class Screen {
     Compare,
     Market,
     Kamas,
+    ManualBuild,
 }
 
 /** In-screen tabs of [Screen.Market]: the price-observation table, or the craft-cost lookup. */
@@ -133,6 +137,15 @@ enum class KamasTab {
 enum class BuilderTab {
     BUILD,
     SPELLS,
+}
+
+/** [Screen.ManualBuild]'s 5 center tabs — see [me.chosante.ui.manualbuild.ManualBuildTabStrip]. */
+enum class ManualTab {
+    ITEMS,
+    ENCHANTMENT,
+    APTITUDE,
+    SPELLS,
+    NOTE,
 }
 
 /** The compare view holds between two and four build columns. */
@@ -318,6 +331,41 @@ data class UiState(
     /** Display name of the loaded build, shown in the workspace; `null` ⇒ "unsaved build". */
     val activeBuildName: String? = null,
     /**
+     * [Screen.ManualBuild]'s own build-in-progress -- deliberately independent of [build]/[achieved]/
+     * [zenith]/[zenithUrl]/[activeBuildId]/[activeBuildName] above, so the auto-search Builder and the
+     * manual construction screen never clobber each other's state. `clazz`/`level`/`minLevel` stay
+     * *shared* top-level fields ("who this build is for" is one concept across both modes).
+     * [PaperdollPanel]/[me.chosante.ui.stats.StatsPanel] render it via [asManualView]'s throwaway
+     * projection, never via a direct signature change.
+     */
+    val manualBuild: BuildCombination? = null,
+    val manualAchieved: Map<Characteristic, Int> = emptyMap(),
+    val manualZenithState: ZenithState = ZenithState.Idle,
+    val manualZenithUrl: String? = null,
+    val manualActiveBuildId: String? = null,
+    val manualActiveBuildName: String? = null,
+    /** Which of the 5 center tabs [Screen.ManualBuild] shows. */
+    val manualActiveTab: ManualTab = ManualTab.ITEMS,
+    /** Freeform text for the build-in-progress; flows into [me.chosante.common.history.HistoryEntry.note]
+     * on save/export (see [me.chosante.ui.state.BuildSearchModel.saveBuild]). */
+    val manualNote: String = "",
+    // --- Items tab filters (Screen.ManualBuild only; independent of the Market screen's own filters) ---
+    val manualItemQuery: String = "",
+    val manualItemMinLevel: String = "0",
+    val manualItemMaxLevel: String = "245",
+    val manualItemTypeFilter: Set<ItemType> = emptySet(),
+    val manualItemRarityFilter: Set<Rarity> = emptySet(),
+    /**
+     * Enchantment tab: which rune sits in which physical socket of a given item (keyed by the item's
+     * **French** name, matching every other manual per-item map here) -- index = slot position, `null`
+     * = empty. The source of truth for slot-addressed placement; [BuildCombination.runes] is a derived,
+     * order-independent *compacted* view of this (see [me.chosante.ui.state.BuildSearchModel.placeManualRuneInSlot]).
+     */
+    val manualRuneSlots: Map<String, List<RuneType?>> = emptyMap(),
+    /** Enchantment tab: socket indices (into the matching [manualRuneSlots] entry) flagged "gold" --
+     * a cosmetic override (counts as any socket colour) matching the in-game gold-rune mechanic. */
+    val manualGoldRuneSlots: Map<String, Set<Int>> = emptyMap(),
+    /**
      * When a saved build is loaded, the search button is locked so re-optimizing it is a deliberate
      * act (it pops [Modal.ConfirmReSearch] first). Cleared once the user confirms or starts fresh.
      */
@@ -399,6 +447,15 @@ data class UiState(
     val itemInfoCache: Map<Int, ItemInfoResponse> = emptyMap(),
     /** itemIds already requested via [me.chosante.ui.state.BuildSearchModel.ensureItemInfoLoaded], so each id is fetched at most once per session. */
     val itemInfoRequested: Set<Int> = emptySet(),
+    /**
+     * "How do I get this item" lookups resolved from market-server's `/api/items/{id}/sources`
+     * (recipe + monster/harvest-node drop sources) -- the foundation for a future build-explanation
+     * page, surfaced now as a compact section in the item-detail popup. Same lazy-cache shape as
+     * [itemInfoCache], populated by [me.chosante.ui.state.BuildSearchModel.ensureItemSourcesLoaded].
+     */
+    val itemSourcesCache: Map<Int, ItemSourcesResponse> = emptyMap(),
+    /** itemIds already requested via [me.chosante.ui.state.BuildSearchModel.ensureItemSourcesLoaded]. */
+    val itemSourcesRequested: Set<Int> = emptySet(),
     // --- Kamas (money-making opportunity finder) --- Active in-screen tab of [Screen.Kamas].
     val kamasTab: KamasTab = KamasTab.CRAFTING,
     /** Every recipe with enough captured price data to score, ranked by ROI -- see `CraftCostService.scanAll`. */
@@ -432,8 +489,9 @@ fun Characteristic.isEngineInternalStat(): Boolean =
         this == Characteristic.MAX_WAKFU_POINTS ||
         isRandomElementStat()
 
-/** The four elementary mastery stats. */
-private val ELEMENTARY_MASTERIES =
+/** The four elementary mastery stats. `internal` (not `private`): also reused by the manual-construction
+ * screen's [me.chosante.ui.manualbuild.ManualStatSidebar] for its own "total mastery" figure. */
+internal val ELEMENTARY_MASTERIES =
     setOf(
         Characteristic.MASTERY_ELEMENTARY_WATER,
         Characteristic.MASTERY_ELEMENTARY_FIRE,
@@ -441,8 +499,9 @@ private val ELEMENTARY_MASTERIES =
         Characteristic.MASTERY_ELEMENTARY_WIND
     )
 
-/** Specialized (non-elementary) maximizable masteries — these are summed. */
-private val SPECIALIZED_MASTERIES =
+/** Specialized (non-elementary) maximizable masteries — these are summed. `internal`: see
+ * [ELEMENTARY_MASTERIES]. */
+internal val SPECIALIZED_MASTERIES =
     setOf(
         Characteristic.MASTERY_DISTANCE,
         Characteristic.MASTERY_CRITICAL,

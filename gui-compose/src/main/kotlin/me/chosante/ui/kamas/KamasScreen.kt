@@ -33,6 +33,7 @@ import me.chosante.marketclient.DropInfo
 import me.chosante.marketclient.HarvestOpportunity
 import me.chosante.marketclient.IngredientCost
 import me.chosante.marketclient.ItemInfoResponse
+import me.chosante.marketclient.ItemSourcesResponse
 import me.chosante.marketclient.MonsterFarmingOpportunity
 import me.chosante.ui.components.BossResistanceChips
 import me.chosante.ui.components.Hairline
@@ -70,6 +71,7 @@ fun KamasScreen(
     ui: UiState,
     onSelectTab: (KamasTab) -> Unit,
     onRequestItemInfo: (Int) -> Unit,
+    onRequestSources: (Int) -> Unit,
     onSetCraftPage: (Int) -> Unit,
     onSetHarvestPage: (Int) -> Unit,
     onSetMonsterPage: (Int) -> Unit,
@@ -78,7 +80,13 @@ fun KamasScreen(
         KamasTabHeader(current = ui.kamasTab, onSelect = onSelectTab)
         Box(modifier = Modifier.fillMaxSize().padding(WDimens.pad)) {
             when (ui.kamasTab) {
-                KamasTab.CRAFTING -> CraftingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetCraftPage)
+                KamasTab.CRAFTING ->
+                    CraftingTab(
+                        ui = ui,
+                        onRequestItemInfo = onRequestItemInfo,
+                        onRequestSources = onRequestSources,
+                        onSetPage = onSetCraftPage
+                    )
                 KamasTab.HARVESTING -> HarvestingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetHarvestPage)
                 KamasTab.MONSTER_FARMING -> MonsterFarmingTab(ui = ui, onRequestItemInfo = onRequestItemInfo, onSetPage = onSetMonsterPage)
             }
@@ -121,6 +129,7 @@ private fun KamasTabHeader(
 private fun CraftingTab(
     ui: UiState,
     onRequestItemInfo: (Int) -> Unit,
+    onRequestSources: (Int) -> Unit,
     onSetPage: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -145,7 +154,9 @@ private fun CraftingTab(
                             item = ui.itemInfoCache[opportunity.itemId],
                             itemInfo = ui.itemInfoCache,
                             lang = ui.lang,
-                            onRequestItemInfo = onRequestItemInfo
+                            onRequestItemInfo = onRequestItemInfo,
+                            sources = ui.itemSourcesCache[opportunity.itemId],
+                            onRequestSources = onRequestSources
                         )
                     }
                 }
@@ -166,6 +177,8 @@ private fun CraftOpportunityRow(
     itemInfo: Map<Int, ItemInfoResponse>,
     lang: Lang,
     onRequestItemInfo: (Int) -> Unit,
+    sources: ItemSourcesResponse?,
+    onRequestSources: (Int) -> Unit,
 ) {
     val decisionColor = if (opportunity.decision == "craft") WColor.success else WColor.muted
     var expanded by remember { mutableStateOf(false) }
@@ -187,7 +200,14 @@ private fun CraftOpportunityRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Column(modifier = Modifier.widthIn(min = 220.dp)) {
-                ItemBadge(itemId = opportunity.itemId, item = item, lang = lang, onRequestItemInfo = onRequestItemInfo)
+                ItemBadge(
+                    itemId = opportunity.itemId,
+                    item = item,
+                    lang = lang,
+                    onRequestItemInfo = onRequestItemInfo,
+                    sources = sources,
+                    onRequestSources = onRequestSources
+                )
                 Text(
                     text = tr(Tr.CRAFT_JOB_LABEL).format(opportunity.jobName.localized(lang)),
                     style = WTypography.labelSmall.copy(color = WColor.muted)

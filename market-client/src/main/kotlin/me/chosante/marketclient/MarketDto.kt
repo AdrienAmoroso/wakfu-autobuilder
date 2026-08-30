@@ -8,6 +8,7 @@ import me.chosante.common.I18nText
 import me.chosante.common.ItemType
 import me.chosante.common.Monster
 import me.chosante.common.Rarity
+import me.chosante.common.RecipeIngredient
 import me.chosante.common.Sublimation
 
 @Serializable
@@ -92,6 +93,47 @@ data class CraftCostResponse(
     val missingPriceCount: Int,
     val decision: String,
     val ingredients: List<IngredientCost>,
+)
+
+// Mirrors market-server's own DTOs exactly -- "how do I get this item": a recipe (no price data,
+// deliberately lighter than CraftCostResponse -- see ItemSourcesService's doc comment) plus
+// monster/harvest-node drop sources, the foundation for a future build-explanation page.
+@Serializable
+data class RecipeSummary(
+    val recipeId: Int,
+    val jobName: I18nText,
+    val level: Int,
+    val resultQuantity: Int,
+    val ingredients: List<RecipeIngredient>,
+)
+
+@Serializable
+data class MonsterDropSource(
+    val monsterId: Int,
+    val name: I18nText,
+    val level: Int,
+    val isBoss: Boolean,
+    val gfx: Int? = null,
+    val dropRate: Double,
+    val quantity: Int,
+)
+
+@Serializable
+data class HarvestDropSource(
+    val resourceId: Int,
+    val name: I18nText,
+    val category: String,
+    val skillLevelRequired: Int,
+    val dropRate: Double,
+    val quantity: Int,
+)
+
+@Serializable
+data class ItemSourcesResponse(
+    val itemId: Int,
+    val recipe: RecipeSummary? = null,
+    val monsterSources: List<MonsterDropSource> = emptyList(),
+    val harvestSources: List<HarvestDropSource> = emptyList(),
 )
 
 // Mirrors market-server's own DTO exactly -- the per-line detail behind HarvestOpportunity's and

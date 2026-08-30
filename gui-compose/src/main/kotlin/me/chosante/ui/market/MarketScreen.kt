@@ -39,6 +39,7 @@ import me.chosante.marketclient.CreateObservationRequest
 import me.chosante.marketclient.FlagMotif
 import me.chosante.marketclient.ItemInfoResponse
 import me.chosante.marketclient.ItemSearchResult
+import me.chosante.marketclient.ItemSourcesResponse
 import me.chosante.marketclient.ObservationResponse
 import me.chosante.ui.components.Hairline
 import me.chosante.ui.components.InfoTip
@@ -86,6 +87,7 @@ fun MarketScreen(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onRequestItemInfo: (Int) -> Unit,
+    onRequestSources: (Int) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onMinLevelChange: (String) -> Unit,
     onMaxLevelChange: (String) -> Unit,
@@ -108,6 +110,7 @@ fun MarketScreen(
                         onSetFlag = onSetFlag,
                         onStartCapture = onStartCapture,
                         onStopCapture = onStopCapture,
+                        onRequestSources = onRequestSources,
                         onSearchQueryChange = onSearchQueryChange,
                         onMinLevelChange = onMinLevelChange,
                         onMaxLevelChange = onMaxLevelChange,
@@ -169,6 +172,7 @@ private fun PricesTab(
     onSetFlag: (Int, FlagMotif) -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
+    onRequestSources: (Int) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onMinLevelChange: (String) -> Unit,
     onMaxLevelChange: (String) -> Unit,
@@ -219,6 +223,8 @@ private fun PricesTab(
                             expanded = ui.marketExpandedItemId == result.item.itemId,
                             observations = if (ui.marketExpandedItemId == result.item.itemId) ui.marketObservations else emptyList(),
                             observationsLoading = ui.marketExpandedItemId == result.item.itemId && ui.marketLoadState == MarketState.Loading,
+                            sources = ui.itemSourcesCache[result.item.itemId],
+                            onRequestSources = onRequestSources,
                             onToggleExpanded = { onToggleExpandedItem(result.item.itemId) },
                             onCreateObservation = onCreateObservation,
                             onDeleteObservation = onDeleteObservation,
@@ -419,6 +425,8 @@ private fun ItemSearchResultCard(
     expanded: Boolean,
     observations: List<ObservationResponse>,
     observationsLoading: Boolean,
+    sources: ItemSourcesResponse?,
+    onRequestSources: (Int) -> Unit,
     onToggleExpanded: () -> Unit,
     onCreateObservation: (CreateObservationRequest) -> Unit,
     onDeleteObservation: (Int) -> Unit,
@@ -442,7 +450,13 @@ private fun ItemSearchResultCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ItemInfoBadge(item = result.item, lang = lang, modifier = Modifier.widthIn(min = 220.dp))
+            ItemInfoBadge(
+                item = result.item,
+                lang = lang,
+                modifier = Modifier.widthIn(min = 220.dp),
+                sources = sources,
+                onRequestSources = onRequestSources
+            )
             PriceSummary(result = result, modifier = Modifier.weight(1f))
             Text(text = if (expanded) "▲" else "▼", style = WTypography.labelMedium.copy(color = WColor.muted))
         }

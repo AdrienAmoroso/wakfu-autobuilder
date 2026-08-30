@@ -165,6 +165,7 @@ fun AppShell(
                                 onStartCapture = model::startCapture,
                                 onStopCapture = model::stopCapture,
                                 onRequestItemInfo = model::ensureItemInfoLoaded,
+                                onRequestSources = model::ensureItemSourcesLoaded,
                                 onSearchQueryChange = model::setMarketSearchQuery,
                                 onMinLevelChange = model::setMarketMinLevel,
                                 onMaxLevelChange = model::setMarketMaxLevel,
@@ -175,11 +176,16 @@ fun AppShell(
                                 onSetPage = model::setMarketPage
                             )
 
+                        Screen.ManualBuild ->
+                            me.chosante.ui.manualbuild
+                                .ManualBuildScreen(model = model)
+
                         Screen.Kamas ->
                             KamasScreen(
                                 ui = ui,
                                 onSelectTab = model::setKamasTab,
                                 onRequestItemInfo = model::ensureItemInfoLoaded,
+                                onRequestSources = model::ensureItemSourcesLoaded,
                                 onSetCraftPage = model::setKamasCraftPage,
                                 onSetHarvestPage = model::setKamasHarvestPage,
                                 onSetMonsterPage = model::setKamasMonsterPage
@@ -207,7 +213,8 @@ fun AppShell(
                 onPickPassive = model::pickPassive,
                 passiveClass = ui.clazz,
                 onPickBoss = model::pickBoss,
-                // The per-item rune picker resolves its carrier from the current build by French name.
+                // The per-item rune picker is auto-Builder-only now -- the manual-construction screen's
+                // Enchantment tab manages runes inline (slot-addressed), never through this modal.
                 runePickerCarrier =
                     (ui.modal as? Modal.ItemRunePicker)?.let { m ->
                         ui.build?.equipments?.firstOrNull { it.name.fr == m.itemName }

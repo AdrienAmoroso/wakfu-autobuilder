@@ -538,7 +538,12 @@ private fun ItemPickerModal(
     }
 }
 
-private fun Equipment.isEquippableForPicker(
+/**
+ * Level/rarity gate shared by every item picker (auto-Builder's [ItemPickerModal], and the
+ * manual-construction Items tab, [me.chosante.ui.manualbuild.tabs.ManualItemsTab]) -- `internal` so
+ * both can use the exact same predicate instead of drifting.
+ */
+internal fun Equipment.isEquippableForPicker(
     level: Int,
     minLevel: Int,
     maxRarity: Rarity,
@@ -549,7 +554,7 @@ private fun Equipment.isEquippableForPicker(
     return levelOk && rarityOk
 }
 
-private fun Equipment.localizedName(lang: Lang): String = name.localized(lang)
+internal fun Equipment.localizedName(lang: Lang): String = name.localized(lang)
 
 @Composable
 private fun LoadingState(message: String) {
