@@ -34,6 +34,14 @@ common-lib            Pure domain model. No project deps. Everyone depends on it
   ▲
   ├── equipments-extractor   Standalone tool: pulls Wakfu game data from Ankama's CDN
   │                          and regenerates the embedded equipments JSON.
+  ├── recipes-extractor      Standalone tool: pulls crafting recipes from Ankama's CDN
+  │                          and regenerates the embedded recipes JSON.
+  ├── harvest-extractor      Standalone tool: pulls harvestable resource nodes from Ankama's CDN
+  │                          and regenerates the embedded harvest-nodes JSON.
+  ├── items-extractor        Standalone tool: crawls Ankama's public encyclopedia (no CDN feed
+  │                          covers these) for resources/consumables/cosmetics/misc items +
+  │                          monster drop tables; regenerates resource-items.json +
+  │                          monster-drops.json and downloads their icons.
   ├── spells-extractor       Standalone tool: scrapes the Ankama encyclopedia and regenerates the
   │                          embedded class-spells JSON (element / AP / damage per class).
   ├── bdata-extractor        Standalone tool: decodes the local game client's scrambled static-data
@@ -43,17 +51,28 @@ common-lib            Pure domain model. No project deps. Everyone depends on it
   │     ▲
   ├── autobuilder            CLI + the SEARCH ENGINE. Depends on common-lib + zenith-builder.
   │     ▲                    Embeds the equipments-vX.Y.Z.json data file as a resource.
-  └── gui-compose            Compose Desktop app. Depends on autobuilder + zenith-builder + common-lib.
+  ├── market-server          Ktor+Exposed+SQLite REST API serving HDV price history, craft/harvest/
+  │     ▲                    monster-farming profitability and capture-pipeline control. Reads the
+  │     │                    same JSON resources as `autobuilder` (no project dep on it — see §5).
+  ├── market-client          Fuel-based DTOs + repository consumed only by gui-compose, kept
+  │     ▲                    deliberately un-coupled from market-server's own DTOs (see §5).
+  └── gui-compose            Compose Desktop app. Depends on autobuilder + zenith-builder +
+                             market-client + common-lib.
 ```
 
 | Module | Type | Entry point | Key libs |
 |---|---|---|---|
 | `common-lib` | library | — | kotlinx-serialization |
 | `equipments-extractor` | app | `me.chosante.equipmentextractor.MainKt` | Fuel (HTTP), serialization |
+| `recipes-extractor` | app | `me.chosante.recipesextractor.MainKt` | Fuel (HTTP), serialization |
+| `harvest-extractor` | app | `me.chosante.harvestextractor.MainKt` | Fuel (HTTP), serialization |
+| `items-extractor` | app | `me.chosante.itemsextractor.MainKt` | java.net.http (HTTP), serialization |
 | `spells-extractor` | app | `me.chosante.spellextractor.MainKt` | java.net.http (HTTP), serialization |
 | `bdata-extractor` | app | `me.chosante.bdataextractor.MainKt` | java.util.zip + java.nio (decode), serialization |
 | `zenith-builder` | library | — | Fuel, coroutines, serialization |
 | `autobuilder` | app | `me.chosante.autobuilder.MainKt` | Clikt + Mordant (CLI), OR-Tools, coroutines |
+| `market-server` | app | `me.chosante.marketserver.MainKt` | Ktor server, Exposed, sqlite-jdbc |
+| `market-client` | library | — | Fuel, coroutines, serialization |
 | `gui-compose` | app | `me.chosante.ui.MainKt` | Compose Multiplatform (Desktop), Conveyor |
 
 > A legacy JavaFX GUI module (`gui`) used to exist; it has been removed — `gui-compose` is the
@@ -234,13 +253,40 @@ regenerates every artifact in order, then prompts to review + test + commit). Se
 versions; its per-record size guard fails loudly if a table's field schema drifts (re-derive the schema
 in `Tables.kt` if so).
 
+### Market / economy data (`market-server` + `market-client`)
+
+A second, independent pipeline covers **HDV (auction house) prices and profitability**, not searched
+by the solver — it only feeds the GUI's Market/Kamas screens (§6):
+
+- `market-server` (package `me.chosante.marketserver`) serves REST endpoints for price observations
+  (`/api/prices/...`: search/create/patch/delete, `latest`), craft-cost + opportunity scanning
+  (`/api/crafts/...`, reading `recipes-extractor`'s `recipes.json`), harvest profitability
+  (`/api/harvest/opportunities`, reading `harvest-extractor`'s `harvest-nodes.json`), monster-drop
+  farming (`/api/monster-drops/opportunities`, reading `items-extractor`'s `monster-drops.json`), an
+  item catalog + sources lookup (`/api/items/...`), and capture start/stop/status
+  (`/api/capture/...`). It reads `autobuilder`'s committed JSON resources directly (an extra Gradle
+  `resources { srcDir(...) }`, not a project dependency — avoids pulling OR-Tools' native libs + Clikt
+  into a REST server) and talks to the **same SQLite file** an external, untouched Python/PowerShell
+  capture pipeline (outside this repo) also writes to. `market-server`'s capture endpoints just start/
+  stop that external pipeline as a subprocess — they never call Ankama's live API themselves
+  (deliberately: `market-server` has zero HTTP-client dependency, so it's structurally incapable of
+  it, unlike a disabled unofficial-endpoint integration an older, now-retired .NET tool used to have).
+- `market-client` exists solely because applying the Kotlin serialization plugin directly inside
+  `gui-compose` breaks Compose Multiplatform's Gradle plugin (a known upstream issue) — it holds the
+  client-side DTOs + a Fuel-based `MarketRepository`, consumed by `gui-compose` as a plain project
+  dependency.
+- `items-extractor`/`recipes-extractor`/`harvest-extractor` (§2) are what keep this pipeline's item/
+  recipe/node catalogs current; none of the three participate in the equipment-solver's own data
+  pipeline above.
+
 ---
 
 ## 6. GUI architecture (`gui-compose`)
 
 **Compose Multiplatform (Desktop)** on JDK 25. The UI is built **programmatically in Kotlin — there
 is no FXML/XML.** Package root `me.chosante.ui`, organized by feature: `shell`, `request`,
-`paperdoll`, `stats`, `state`, `components`, `i18n`, `theme`, `testing`.
+`paperdoll`, `stats`, `manualbuild`, `history`, `market`, `kamas`, `spells`, `state`, `components`,
+`i18n`, `theme`, `testing`.
 
 - **`Main.kt`** — `application { Window(...) }`. The window opens **floating** (centered, clamped to
   the usable screen) so the loading screen paints instantly, is pulled to the foreground (useful for
@@ -251,20 +297,35 @@ is no FXML/XML.** Package root `me.chosante.ui`, organized by feature: `shell`, 
   then **`Crossfade`s** into the main UI. It also sets the window / macOS dock icon from
   `assets/branding/app-icon.png`.
 - **`BuildSearchModel`** (`state/`) — the **single shared view-model** (Compose `mutableStateOf`
-  `UiState`). It runs the search off-thread (`Dispatchers.Default`), collects the engine `Flow`,
-  and owns warm-up state (`WarmupTiming`), background icon preloading (started **after** warm-up so
-  the two never compete during startup), the equipment catalog, and Zenith build creation. The
-  warm-up itself waits for the window's first frame (`windowShown`) before touching the native
-  engine. (Unlike the old JavaFX GUI, state is centralized here — not in the widgets.)
-- **`AppShell`** (`shell/`) — `TopBar` (brand logo, language toggle, class, level/min-level, the
-  progress + match/mastery meters, Search button) above a 3-column body:
-  - **`RequestPanel`** (`request/`) — search mode, target-stats editor, constraints (per-rarity
-    allow/exclude toggle chips, search duration…), forced / excluded item chips.
-  - **`PaperdollPanel`** (`paperdoll/`) — the 14 equipment slots of the discovered build.
-  - **`StatsPanel`** (`stats/`) — the headline hero (match `%` in precision mode, **cumulated
-    requested mastery** in most-masteries mode), mastery summary, desired-vs-achieved grid, skill
-    tree, and the Zenith open/copy actions.
-  Long panels show conditional **scroll-hint** badges (`components/ScrollHints.kt`).
+  `UiState`) behind every screen below. It runs the search off-thread (`Dispatchers.Default`),
+  collects the engine `Flow`, and owns warm-up state (`WarmupTiming`), background icon preloading
+  (started **after** warm-up so the two never compete during startup), the equipment catalog, Zenith
+  build creation, and every market/history/manual-build mutation too — it is a large file (its own
+  functions are grouped by feature in sibling `state/BuildSearchModel*.kt` files; see the header
+  comment of `BuildSearchModel.kt` for the split). The warm-up itself waits for the window's first
+  frame (`windowShown`) before touching the native engine. (Unlike the old JavaFX GUI, state is
+  centralized here — not in the widgets.)
+- **`Screen`** (`state/UiState.kt`) is one of **`Builder`, `Library`, `Compare`, `Market`, `Kamas`,
+  `ManualBuild`** — `AppShell`'s `when(ui.screen)` switches the body, `TopBar`'s `NavTabs` switches
+  between them:
+  - **`Builder`** — the original auto-search flow. `AppShell` (`shell/`) renders `TopBar` (brand logo,
+    language toggle, class, level/min-level, the progress + match/mastery meters, Search button) above
+    a 3-column body: **`RequestPanel`** (`request/`: search mode, target-stats editor, constraints,
+    forced/excluded item chips), **`PaperdollPanel`** (`paperdoll/`: the 14 equipment slots of the
+    discovered build), **`StatsPanel`** (`stats/`: headline hero, mastery summary, desired-vs-achieved
+    grid, skill tree, Zenith actions) — plus a spells/passives tab (`spells/ClassSpellsPanel.kt`).
+    Long panels show conditional **scroll-hint** badges (`components/ScrollHints.kt`).
+  - **`ManualBuild`** (`manualbuild/`) — a Wakfuli-style hand-assembled build screen: the same
+    `PaperdollPanel`/stat-sidebar visual language reused in **compact mode**, plus 5 tabs (Items,
+    Enchantment, Aptitude, Spells, Note) for picking gear, socketing runes/sublimations, allocating
+    skill points, and freeform notes, independent of the solver.
+  - **`Library`** / **`Compare`** (`history/`) — saved builds (`HistoryRepository`-backed: tags,
+    folders, sort/group, import/export) and a side-by-side stat comparison of up to a few saved builds.
+  - **`Market`** (`market/MarketScreen.kt`) — Prices (HDV observation search/edit + capture
+    start/stop) and Craft Cost tabs against `market-server` via `market-client`'s `MarketRepository`
+    (see §5's market/economy subsection).
+  - **`Kamas`** (`kamas/KamasScreen.kt`) — profitability scanners (crafting profession, resource
+    harvesting, monster-drop farming) built on the same `market-server` endpoints.
 - **Visuals** (`components/`): `IconPreloader` decodes item icons off-thread into a cache;
   `rememberClasspathBitmap` loads PNGs from the classpath. `theme/` holds the dark palette
   (`WColor`/`WTypography`/`WDimens`). Branding assets live in `assets/branding/` (a translucent
@@ -273,7 +334,9 @@ is no FXML/XML.** Package root `me.chosante.ui`, organized by feature: `shell`, 
   through the `LocalLang` composition local. **There is no generated i18n code.**
 - **Screenshot smoke test**: setting `WAKFU_COMPOSE_SCREENSHOT=/path` (or the `wakfu.compose.screenshot`
   system property) renders the app to a PNG and exits (`testing/ScreenshotCapture`); in this mode
-  warm-up gating is skipped so the real UI renders immediately.
+  warm-up gating is skipped so the real UI renders immediately. Related env vars land the screenshot on
+  a specific screen/mode for smoke-testing it (e.g. `WAKFU_COMPOSE_SCREENSHOT_MARKET`,
+  `_KAMAS`) — grep `ScreenshotCapture.kt` / `BuildSearchModel.kt` for the current set.
 
 > `docs/design-reference/` (HTML/CSS/JSX mockups + screenshots) is the **visual source of truth**.
 > `styles-clean.css` + `Wakfu Autobuilder.html` are the primary design.
